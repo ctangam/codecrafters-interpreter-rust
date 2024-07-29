@@ -229,6 +229,25 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
                 }
             }
 
+            '0'..='9' => {
+                let mut lexeme = String::new();
+                lexeme.push(*char);
+                i += 1;
+                loop {
+                    let char = chars.get(i);
+                    if char.is_none() {
+                        break;
+                    }
+                    let char = char.unwrap();
+                    if !char.is_ascii_digit() && *char != '.' {
+                        break;
+                    }
+                    lexeme.push(*char);
+                    i += 1;
+                }
+                tokens.push(Token::new(TokenValue::Number(lexeme.parse().unwrap()), lexeme));
+            }
+
             ' ' | '\r' | '\t' => {}
             '\n' => line += 1,
             c => {
