@@ -117,6 +117,7 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
 
             '"' => {
                 let mut string = String::new();
+                string.push(*char);
                 i += 1;
                 loop {
                     let char = chars.get(i);
@@ -127,6 +128,7 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
                     }
                     let char = char.unwrap();
                     if *char == '"' {
+                        string.push(*char);
                         tokens.push(Token::new(TokenType::STRING, Some(string), None));
                         break;
                     }
