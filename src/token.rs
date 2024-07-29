@@ -1,62 +1,140 @@
-use std::fmt::Display;
-
+use std::fmt::{Display, Pointer};
 
 pub struct Token {
-    pub token_type: TokenType,
-    pub lexeme: Option<String>,
-    pub literal: Option<String>,
+    pub value: TokenValue,
+    pub lexeme: String,
     // pub line: u32,
 }
 
-#[derive(Debug)]
-enum TokenType {
-        VAR,
-        IDENTIFIER,
-        STRING,
-        NUMBER,
-        PLUS,
-        MINUS,
-        STAR,
-        SLASH,
-        SEMICOLON,
-        LEFT_PAREN,
-        RIGHT_PAREN,
-        LEFT_BRACE,
-        RIGHT_BRACE,
-        COMMA,
-        DOT,
-        EQUAL,
-        EQUAL_EQUAL,
-        BANG,
-        BANG_EQUAL,
-        GREATER,
-        GREATER_EQUAL,
-        LESS,
-        LESS_EQUAL,
-        AND,
-        OR,
-        EOF,
+pub type Number = f64;
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum TokenValue {
+    // Single-character tokens.
+    LeftParen,
+    RightParen,
+    LeftBrace,
+    RightBrace,
+    Colon,
+    Comma,
+    Dot,
+    Minus,
+    Plus,
+    Question,
+    Semicolon,
+    Slash,
+    Star,
+
+    // One or two character tokens.
+    Bang,
+    BangEqual,
+    Equal,
+    EqualEqual,
+    Greater,
+    GreaterEqual,
+    Less,
+    LessEqual,
+
+    // Literals.
+    Identifier(String),
+    String(String),
+    Number(Number),
+
+    // Keywords.
+    And,
+    Break,
+    Class,
+    Else,
+    False,
+    Fun,
+    For,
+    If,
+    Nil,
+    Or,
+    Print,
+    Return,
+    Super,
+    This,
+    True,
+    Var,
+    While,
+
+    Eof,
+}
+
+impl Display for TokenValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TokenValue::LeftParen => write!(f, "LEFT_PAREN"),
+            TokenValue::RightParen => write!(f, "RIGHT_PAREN"),
+            TokenValue::LeftBrace => write!(f, "LEFT_BRACE"),
+            TokenValue::RightBrace => write!(f, "RIGHT_BRACE"),
+            TokenValue::Colon => write!(f, "COLON"),
+            TokenValue::Comma => write!(f, "COMMA"),
+            TokenValue::Dot => write!(f, "DOT"),
+            TokenValue::Minus => write!(f, "MINUS"),
+            TokenValue::Plus => write!(f, "PLUS"),
+            TokenValue::Question => write!(f, "QUESTION"),
+            TokenValue::Semicolon => write!(f, "SEMICOLON"),
+            TokenValue::Slash => write!(f, "SLASH"),
+            TokenValue::Star => write!(f, "STAR"),
+
+            TokenValue::Bang => write!(f, "BANG"),
+            TokenValue::BangEqual => write!(f, "BANG_EQUAL"),
+            TokenValue::Equal => write!(f, "EQUAL"),
+            TokenValue::EqualEqual => write!(f, "EQUAL_EQUAL"),
+            TokenValue::Greater => write!(f, "GREATER"),
+            TokenValue::GreaterEqual => write!(f, "GREATER_EQUAL"),
+            TokenValue::Less => write!(f, "LESS"),
+            TokenValue::LessEqual => write!(f, "LESS_EQUAL"),
+
+            TokenValue::Identifier(s) => write!(f, "IDENTIFIER"),
+            TokenValue::String(s) => write!(f, "STRING"),
+            TokenValue::Number(n) => write!(f, "NUMBER"),
+
+            TokenValue::And => write!(f, "AND"),
+            TokenValue::Break => write!(f, "BREAK"),
+            TokenValue::Class => write!(f, "CLASS"),
+            TokenValue::Else => write!(f, "ELSE"),
+            TokenValue::False => write!(f, "FALSE"),
+            TokenValue::Fun => write!(f, "FUN"),
+            TokenValue::For => write!(f, "FOR"),
+            TokenValue::If => write!(f, "IF"),
+            TokenValue::Nil => write!(f, "NIL"),
+            TokenValue::Or => write!(f, "OR"),
+            TokenValue::Print => write!(f, "PRINT"),
+            TokenValue::Return => write!(f, "RETURN"),
+            TokenValue::Super => write!(f, "SUPER"),
+            TokenValue::This => write!(f, "THIS"),
+            TokenValue::True => write!(f, "TRUE"),
+            TokenValue::Var => write!(f, "VAR"),
+            TokenValue::While => write!(f, "WHILE"),
+
+            TokenValue::Eof => write!(f, "EOF"),
+            
+        }
+    }
 }
 
 impl Token {
-    pub fn new(token_type: TokenType, lexeme: Option<String>, literal: Option<String>) -> Token {
+    pub fn new(value: TokenValue, lexeme: String) -> Token {
         Token {
-            token_type,
+            value,
             lexeme,
-            literal,
             // line,
         }
     }
-
-
 }
 
-impl Display for Token {
+
+
+impl std::fmt::Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let lexeme = self.lexeme.clone().unwrap_or("".to_string());
-        let literal = self.literal.clone().unwrap_or("null".to_string());
-        write!(f, "{:?} {} {}", self.token_type, lexeme, literal)
+        match &self.value {
+            TokenValue::String(s) => write!(f, "{} {} {s}", self.value, self.lexeme),
+            TokenValue::Number(n) => write!(f, "{} {} {n}", self.value, self.lexeme),
+            _ => write!(f, "{} {} null", self.value, self.lexeme),
+        }
     }
 }
 
@@ -73,47 +151,57 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
         }
         let char = char.unwrap();
         match char {
-            '(' => tokens.push(Token::new(TokenType::LEFT_PAREN, Some(char.to_string()), None)),
-            ')' => tokens.push(Token::new(TokenType::RIGHT_PAREN, Some(char.to_string()), None)),
-            '{' => tokens.push(Token::new(TokenType::LEFT_BRACE, Some(char.to_string()), None)),
-            '}' => tokens.push(Token::new(TokenType::RIGHT_BRACE, Some(char.to_string()), None)),
-            ',' => tokens.push(Token::new(TokenType::COMMA, Some(char.to_string()), None)),
-            '.' => tokens.push(Token::new(TokenType::DOT, Some(char.to_string()), None)),
-            '-' => tokens.push(Token::new(TokenType::MINUS, Some(char.to_string()), None)),
-            '+' => tokens.push(Token::new(TokenType::PLUS, Some(char.to_string()), None)),
-            ';' => tokens.push(Token::new(TokenType::SEMICOLON, Some(char.to_string()), None)),
-            '*' => tokens.push(Token::new(TokenType::STAR, Some(char.to_string()), None)),
-            '/' => if let Some('/') = chars.get(i + 1) {
-                while chars.get(i + 1).is_some_and(|c| *c != '\n') {
-                    i += 1;
+            '(' => tokens.push(Token::new(TokenValue::LeftParen, char.to_string())),
+            ')' => tokens.push(Token::new(TokenValue::RightParen, char.to_string())),
+            '{' => tokens.push(Token::new(TokenValue::LeftBrace, char.to_string())),
+            '}' => tokens.push(Token::new(TokenValue::RightBrace, char.to_string())),
+            ',' => tokens.push(Token::new(TokenValue::Comma, char.to_string())),
+            '.' => tokens.push(Token::new(TokenValue::Dot, char.to_string())),
+            '-' => tokens.push(Token::new(TokenValue::Minus, char.to_string())),
+            '+' => tokens.push(Token::new(TokenValue::Plus, char.to_string())),
+            ';' => tokens.push(Token::new(TokenValue::Semicolon, char.to_string())),
+            '*' => tokens.push(Token::new(TokenValue::Star, char.to_string())),
+            '/' => {
+                if let Some('/') = chars.get(i + 1) {
+                    while chars.get(i + 1).is_some_and(|c| *c != '\n') {
+                        i += 1;
+                    }
+                } else {
+                    tokens.push(Token::new(TokenValue::Slash, char.to_string()))
                 }
-            } else {
-                tokens.push(Token::new(TokenType::SLASH, Some(char.to_string()), None))
-            },
-            '=' => if let Some('=') = chars.get(i + 1)  {
-                tokens.push(Token::new(TokenType::EQUAL_EQUAL, Some("==".to_string()), None));
-                i += 1;
-            } else {
-                tokens.push(Token::new(TokenType::EQUAL, Some(char.to_string()), None))
-            },
-            '!' => if let Some('=') = chars.get(i + 1) {
-                tokens.push(Token::new(TokenType::BANG_EQUAL, Some("!=".to_string()), None));
-                i += 1;
-            } else {
-                tokens.push(Token::new(TokenType::BANG, Some(char.to_string()), None))
-            },
-            '<' =>  if let Some('=') = chars.get(i + 1)  {
-                tokens.push(Token::new(TokenType::LESS_EQUAL, Some("<=".to_string()), None));
-                i += 1;
-            } else {
-                tokens.push(Token::new(TokenType::LESS, Some(char.to_string()), None))
-            },
-            '>' =>  if let Some('=') = chars.get(i + 1)  {
-                tokens.push(Token::new(TokenType::GREATER_EQUAL, Some(">=".to_string()), None));
-                i += 1;
-            } else {
-                tokens.push(Token::new(TokenType::GREATER, Some(char.to_string()), None))
-            },
+            }
+            '=' => {
+                if let Some('=') = chars.get(i + 1) {
+                    tokens.push(Token::new(TokenValue::EqualEqual, "==".to_string()));
+                    i += 1;
+                } else {
+                    tokens.push(Token::new(TokenValue::Equal, char.to_string()))
+                }
+            }
+            '!' => {
+                if let Some('=') = chars.get(i + 1) {
+                    tokens.push(Token::new(TokenValue::BangEqual, "!=".to_string()));
+                    i += 1;
+                } else {
+                    tokens.push(Token::new(TokenValue::Bang, char.to_string()))
+                }
+            }
+            '<' => {
+                if let Some('=') = chars.get(i + 1) {
+                    tokens.push(Token::new(TokenValue::LessEqual, "<=".to_string()));
+                    i += 1;
+                } else {
+                    tokens.push(Token::new(TokenValue::Less, char.to_string()))
+                }
+            }
+            '>' => {
+                if let Some('=') = chars.get(i + 1) {
+                    tokens.push(Token::new(TokenValue::GreaterEqual, ">=".to_string()));
+                    i += 1;
+                } else {
+                    tokens.push(Token::new(TokenValue::Greater, char.to_string()))
+                }
+            }
 
             '"' => {
                 let mut lexeme = String::new();
@@ -129,8 +217,8 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
                     let char = char.unwrap();
                     if *char == '"' {
                         lexeme.push(*char);
-                        let literal = lexeme.clone().drain(1..lexeme.len() - 1).collect(); 
-                        tokens.push(Token::new(TokenType::STRING, Some(lexeme), Some(literal)));
+                        let literal: String = lexeme.clone().drain(1..lexeme.len() - 1).collect();
+                        tokens.push(Token::new(TokenValue::String(literal), lexeme));
                         break;
                     }
                     if *char == '\n' {
@@ -139,14 +227,17 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
                     lexeme.push(*char);
                     i += 1;
                 }
-            },
-            
-            ' ' | '\r' | '\t' => {},
+            }
+
+            ' ' | '\r' | '\t' => {}
             '\n' => line += 1,
-            c => {eprintln!("[line {line}] Error: Unexpected character: {c}"); code = 65;},
+            c => {
+                eprintln!("[line {line}] Error: Unexpected character: {c}");
+                code = 65;
+            }
         }
         i += 1;
     }
-    tokens.push(Token::new(TokenType::EOF, None, None));
+    tokens.push(Token::new(TokenValue::Eof, "".to_string()));
     (tokens, code)
 }
