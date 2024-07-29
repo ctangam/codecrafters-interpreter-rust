@@ -64,7 +64,7 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
     let mut tokens = Vec::new();
     let mut line = 1;
     let mut code = 0;
-    let mut chars = source.chars().collect::<Vec<_>>();
+    let chars = source.chars().collect::<Vec<_>>();
     let mut i = 0;
     loop {
         let char = chars.get(i);
@@ -83,8 +83,13 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
             '+' => tokens.push(Token::new(TokenType::PLUS, Some(char.to_string()), None)),
             ';' => tokens.push(Token::new(TokenType::SEMICOLON, Some(char.to_string()), None)),
             '*' => tokens.push(Token::new(TokenType::STAR, Some(char.to_string()), None)),
-            '/' => tokens.push(Token::new(TokenType::SLASH, Some(char.to_string()), None)),
-            
+            '/' => if let Some('/') = chars.get(i + 1) {
+                while chars.get(i + 1).is_some_and(|c| *c != '\n') {
+                    i += 1;
+                }
+            } else {
+                tokens.push(Token::new(TokenType::SLASH, Some(char.to_string()), None))
+            },
             '=' => if let Some('=') = chars.get(i + 1)  {
                 tokens.push(Token::new(TokenType::EQUAL_EQUAL, Some("==".to_string()), None));
                 i += 1;
