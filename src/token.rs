@@ -116,8 +116,8 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
             },
 
             '"' => {
-                let mut string = String::new();
-                string.push(*char);
+                let mut lexeme = String::new();
+                lexeme.push(*char);
                 i += 1;
                 loop {
                     let char = chars.get(i);
@@ -128,14 +128,15 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
                     }
                     let char = char.unwrap();
                     if *char == '"' {
-                        string.push(*char);
-                        tokens.push(Token::new(TokenType::STRING, Some(string), None));
+                        lexeme.push(*char);
+                        let literal = lexeme.clone().drain(1..lexeme.len() - 1).collect(); 
+                        tokens.push(Token::new(TokenType::STRING, Some(lexeme), Some(literal)));
                         break;
                     }
                     if *char == '\n' {
                         line += 1;
                     }
-                    string.push(*char);
+                    lexeme.push(*char);
                     i += 1;
                 }
             },
