@@ -45,7 +45,9 @@ impl Token {
 
 impl Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?} {:?} {:?}", self.token_type, self.lexeme, self.literal)
+        let lexeme = self.lexeme.clone().unwrap_or("".to_string());
+        let literal = self.literal.clone().unwrap_or("null".to_string());
+        write!(f, "{:?} {} {}", self.token_type, lexeme, literal)
     }
 }
 
@@ -54,6 +56,7 @@ pub fn scan(source: String) -> Vec<Token> {
     for char in source.chars() {
         match char {
             '(' => tokens.push(Token::new(TokenType::LEFT_PAREN, Some(char.to_string()), None)),
+            ')' => tokens.push(Token::new(TokenType::RIGHT_PAREN, Some(char.to_string()), None)),
             _ => (),
         }
     }
