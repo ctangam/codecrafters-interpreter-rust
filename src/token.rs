@@ -245,7 +245,12 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
                     lexeme.push(*char);
                     i += 1;
                 }
-                tokens.push(Token::new(TokenValue::Number(lexeme.parse().unwrap()), lexeme));
+                if lexeme.parse::<f64>().is_ok() {
+                    tokens.push(Token::new(TokenValue::Number(lexeme.parse().unwrap()), lexeme));
+                } else {
+                    eprintln!("[line {line}] Error: Unexpected character: {lexeme}");
+                    code = 65;
+                }
             }
 
             ' ' | '\r' | '\t' => {}
