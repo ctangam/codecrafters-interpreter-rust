@@ -57,6 +57,14 @@ pub fn scan(source: String) -> Vec<Token> {
         match char {
             '(' => tokens.push(Token::new(TokenType::LEFT_PAREN, Some(char.to_string()), None)),
             ')' => tokens.push(Token::new(TokenType::RIGHT_PAREN, Some(char.to_string()), None)),
+            '{' => tokens.push(Token::new(TokenType::LEFT_BRACE, Some(char.to_string()), None)),
+            '}' => tokens.push(Token::new(TokenType::RIGHT_BRACE, Some(char.to_string()), None)),
+            ',' => tokens.push(Token::new(TokenType::COMMA, Some(char.to_string()), None)),
+            '-' => tokens.push(Token::new(TokenType::MINUS, Some(char.to_string()), None)),
+            '+' => tokens.push(Token::new(TokenType::PLUS, Some(char.to_string()), None)),
+            ';' => tokens.push(Token::new(TokenType::SEMICOLON, Some(char.to_string()), None)),
+            '*' => tokens.push(Token::new(TokenType::MULTIPLY, Some(char.to_string()), None)),
+            '/' => tokens.push(Token::new(TokenType::DIVIDE, Some(char.to_string()), None)),
             _ => (),
         }
     }
