@@ -301,6 +301,7 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
             }
 
             ' ' | '\r' | '\t' => {}
+            
             '\n' => line += 1,
             c => {
                 eprintln!("[line {line}] Error: Unexpected character: {c}");
