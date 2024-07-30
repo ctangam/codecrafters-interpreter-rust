@@ -84,7 +84,7 @@ impl std::fmt::Display for Expr {
                 right,
             }) => f.write_fmt(format_args!("({} {} {})", left, operator, right)),
             
-            Expr::Grouping(Grouping { expr }) => f.write_fmt(format_args!("({})", expr)),
+            Expr::Grouping(Grouping { expr }) => f.write_fmt(format_args!("(group {})", expr)),
             Expr::Assign(Assign { name, value }) => write!(f, "{} = {}", name, value),
         
         }
