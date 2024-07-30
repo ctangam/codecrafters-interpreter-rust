@@ -2,7 +2,13 @@ use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::process::exit;
+
+use parser::Parser;
 pub mod token;
+pub mod expr;
+pub mod parser;
+pub mod lexer;
+pub mod printer;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -16,17 +22,13 @@ fn main() {
 
     match command.as_str() {
         "tokenize" => {
-            // You can use print statements as follows for debugging, they'll be visible when running tests.
-            writeln!(io::stderr(), "Logs from your program will appear here!").unwrap();
-
             let file_contents = fs::read_to_string(filename).unwrap_or_else(|_| {
                 writeln!(io::stderr(), "Failed to read file {}", filename).unwrap();
                 String::new()
             });
 
-            // Uncomment this block to pass the first stage
             if !file_contents.is_empty() {
-                let (tokens, code) = token::scan(file_contents);
+                let (tokens, code) = lexer::scan(file_contents);
                 for token in tokens {
                     println!("{}", token);
                 }
@@ -34,7 +36,25 @@ fn main() {
                     exit(code);
                 }
             } else {
-                println!("EOF  null"); // Placeholder, remove this line when implementing the scanner
+                println!("EOF  null");
+            }
+        }
+        "parse" => {
+            let file_contents = fs::read_to_string(filename).unwrap_or_else(|_| {
+                writeln!(io::stderr(), "Failed to read file {}", filename).unwrap();
+                String::new()
+            });
+            if !file_contents.is_empty() {
+                let (tokens, code) = lexer::scan(file_contents);
+                if code != 0 {
+                    exit(code);
+                }
+                let mut parser = Parser::new(tokens);
+                let exprs = parser.parse().unwrap();
+
+                for expr in exprs {
+                    println!("{}", expr);
+                }
             }
         }
         _ => {
@@ -42,4 +62,8 @@ fn main() {
             return;
         }
     }
+}
+
+pub trait Walkable<V, T> {
+    fn walk(&self, visitor: &V) -> T;
 }
