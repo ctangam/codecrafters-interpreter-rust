@@ -152,8 +152,8 @@ impl Token {
 impl std::fmt::Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.value {
-            TokenValue::String(s) => write!(f, "{} {} {s}", self.value, self.lexeme),
-            TokenValue::Number(n) => write!(f, "{} {} {n}", self.value, self.lexeme),
+            TokenValue::String(s) => write!(f, "{} {} {}", self.value, self.lexeme, s),
+            TokenValue::Number(n) => write!(f, "{} {} {:.1}", self.value, self.lexeme, n),
             _ => write!(f, "{} {} null", self.value, self.lexeme),
         }
     }
@@ -166,12 +166,7 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
     let mut code = 0;
     let chars = source.chars().collect::<Vec<_>>();
     let mut i = 0;
-    loop {
-        let char = chars.get(i);
-        if char.is_none() {
-            break;
-        }
-        let char = char.unwrap();
+    while let Some(char) = chars.get(i) {
         match char {
             '(' => tokens.push(Token::new(TokenValue::LeftParen, char.to_string())),
             ')' => tokens.push(Token::new(TokenValue::RightParen, char.to_string())),
@@ -273,10 +268,11 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
                         },
                     }
                 }
+                let lexeme = lexeme.trim_end_matches('.');
                 if lexeme.parse::<f64>().is_ok() {
                     tokens.push(Token::new(
                         TokenValue::Number(lexeme.parse().unwrap()),
-                        lexeme,
+                        lexeme.to_string(),
                     ));
                 } else {
                     eprintln!("[line {line}] Error: Unexpected character: {lexeme}");
