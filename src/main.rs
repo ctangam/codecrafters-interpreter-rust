@@ -62,7 +62,7 @@ fn main() {
                         for error in errors {
                             writeln!(io::stderr(), "{}", error).unwrap();
                         }
-                        // exit(65);
+                        exit(65);
                     }
                 }
             }
