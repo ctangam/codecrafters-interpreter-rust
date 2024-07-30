@@ -1,7 +1,6 @@
 use std::{
-    char,
     collections::HashMap,
-    fmt::{Display, Pointer},
+    fmt::{Display},
 };
 
 pub struct Token {
@@ -272,7 +271,10 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
                         },
                     }
                 }
-                let lexeme = lexeme.trim_end_matches('.');
+                if lexeme.ends_with(".") {
+                    i -= 2;
+                    lexeme.pop();
+                }
                 if lexeme.parse::<f64>().is_ok() {
                     tokens.push(Token::new(
                         TokenValue::Number(lexeme.parse().unwrap()),
