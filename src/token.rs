@@ -1,4 +1,8 @@
-use std::{collections::HashMap, fmt::{Display, Pointer}};
+use std::{
+    char,
+    collections::HashMap,
+    fmt::{Display, Pointer},
+};
 
 pub struct Token {
     pub value: TokenValue,
@@ -131,7 +135,6 @@ impl Display for TokenValue {
             TokenValue::While => write!(f, "WHILE"),
 
             TokenValue::Eof => write!(f, "EOF"),
-            
         }
     }
 }
@@ -145,8 +148,6 @@ impl Token {
         }
     }
 }
-
-
 
 impl std::fmt::Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -230,65 +231,72 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
                 i += 1;
                 loop {
                     let char = chars.get(i);
-                    if char.is_none() {
-                        eprintln!("[line {line}] Error: Unterminated string.");
-                        code = 65;
-                        break;
+                    match char {
+                        Some('"') => {
+                            lexeme.push('"');
+                            let literal: String =
+                                lexeme.clone().drain(1..lexeme.len() - 1).collect();
+                            tokens.push(Token::new(TokenValue::String(literal), lexeme));
+                            break;
+                        }
+                        Some('\n') => line += 1,
+                        Some(char) => {
+                            lexeme.push(*char);
+                            i += 1;
+                        }
+                        None => {
+                            eprintln!("[line {line}] Error: Unterminated string.");
+                            code = 65;
+                            break;
+                        }
                     }
-                    let char = char.unwrap();
-                    if *char == '"' {
-                        lexeme.push(*char);
-                        let literal: String = lexeme.clone().drain(1..lexeme.len() - 1).collect();
-                        tokens.push(Token::new(TokenValue::String(literal), lexeme));
-                        break;
-                    }
-                    if *char == '\n' {
-                        line += 1;
-                    }
-                    lexeme.push(*char);
-                    i += 1;
                 }
             }
 
             '0'..='9' => {
                 let mut lexeme = String::new();
-                lexeme.push(*char);
-                i += 1;
-                loop {
-                    let char = chars.get(i);
-                    if char.is_none() {
-                        break;
+                let mut has_digit = false;
+                while let Some(char) = chars.get(i) {
+                    match char {
+                        '0'..='9' => {
+                            lexeme.push(*char);
+                            i += 1;
+                        }
+                        '.' if !has_digit => {
+                            has_digit = true;
+                            lexeme.push(*char);
+                            i += 1;
+                        }
+                        _ => {
+                            i -= 1;
+                            break;
+                        },
                     }
-                    let char = char.unwrap();
-                    if !char.is_ascii_digit() && *char != '.' {
-                        break;
-                    }
-                    lexeme.push(*char);
-                    i += 1;
                 }
                 if lexeme.parse::<f64>().is_ok() {
-                    tokens.push(Token::new(TokenValue::Number(lexeme.parse().unwrap()), lexeme));
+                    tokens.push(Token::new(
+                        TokenValue::Number(lexeme.parse().unwrap()),
+                        lexeme,
+                    ));
                 } else {
                     eprintln!("[line {line}] Error: Unexpected character: {lexeme}");
-                    // code = 65;
+                    code = 65;
                 }
             }
 
             'a'..='z' | 'A'..='Z' | '_' => {
                 let mut lexeme = String::new();
-                lexeme.push(*char);
-                i += 1;
-                loop {
-                    let char = chars.get(i);
-                    if char.is_none() {
-                        break;
+                while let Some(char) = chars.get(i) {
+                    match char {
+                        'a'..='z' | 'A'..='Z' | '0'..='9' | '_' => {
+                            lexeme.push(*char);
+                            i += 1;
+                        }
+                        _ => {
+                            i -= 1;
+                            break;
+                        },
                     }
-                    let char = char.unwrap();
-                    if !char.is_ascii_alphanumeric() && *char != '_' {
-                        break;
-                    }
-                    lexeme.push(*char);
-                    i += 1;
                 }
                 if keywords.contains_key(lexeme.as_str()) {
                     tokens.push(Token::new(
