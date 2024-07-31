@@ -3,7 +3,7 @@ use crate::expr::{Assign, Binary, ExprVisitor, Grouping, Literal, Unary};
 pub struct AstPrinter;
 
 impl ExprVisitor<()> for AstPrinter {
-    fn visitLiteral(&self, expr: &Literal) -> () {
+    fn visit_literal(&self, expr: &Literal) -> () {
         match expr {
             Literal::String(s) => println!("{}", s),
             Literal::Number(n) => println!("{}", n),
@@ -13,19 +13,19 @@ impl ExprVisitor<()> for AstPrinter {
         }
     }
     
-    fn visitGrouping(&self, expr: &Grouping) -> () {
+    fn visit_grouping(&self, expr: &Grouping) -> () {
         todo!()
     }
 
-    fn visitUnary(&self, expr: &Unary) -> () {
+    fn visit_unary(&self, expr: &Unary) -> () {
         todo!()
     }
 
-    fn visitBinary(&self, expr: &Binary) -> () {
+    fn visit_binary(&self, expr: &Binary) -> () {
         todo!()
     }
 
-    fn visitAssign(&self, expr: &Assign) -> () {
+    fn visit_assign(&self, expr: &Assign) -> () {
         todo!()
     }
 }

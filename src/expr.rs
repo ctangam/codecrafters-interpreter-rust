@@ -39,25 +39,25 @@ pub struct Assign {
 impl<V: ExprVisitor<T>, T> Walkable<V, T> for Expr {
     fn walk(&self, visitor: &V) -> T {
         match self {
-            Expr::Literal(literal) => visitor.visitLiteral(literal),
-            Expr::Grouping(grouping) => visitor.visitGrouping(grouping),
-            Expr::Unary(unary) => visitor.visitUnary(unary),
-            Expr::Binary(binary) => visitor.visitBinary(binary),
-            Expr::Assign(assign) => visitor.visitAssign(assign),
+            Expr::Literal(literal) => visitor.visit_literal(literal),
+            Expr::Grouping(grouping) => visitor.visit_grouping(grouping),
+            Expr::Unary(unary) => visitor.visit_unary(unary),
+            Expr::Binary(binary) => visitor.visit_binary(binary),
+            Expr::Assign(assign) => visitor.visit_assign(assign),
         }
     }
 }
 
 pub trait ExprVisitor<T> {
-    fn visitLiteral(&self, expr: &Literal) -> T;
+    fn visit_literal(&self, expr: &Literal) -> T;
 
-    fn visitGrouping(&self, expr: &Grouping) -> T;
+    fn visit_grouping(&self, expr: &Grouping) -> T;
 
-    fn visitUnary(&self, expr: &Unary) -> T;
+    fn visit_unary(&self, expr: &Unary) -> T;
 
-    fn visitBinary(&self, expr: &Binary) -> T;
+    fn visit_binary(&self, expr: &Binary) -> T;
 
-    fn visitAssign(&self, expr: &Assign) -> T;
+    fn visit_assign(&self, expr: &Assign) -> T;
 }
 
 
