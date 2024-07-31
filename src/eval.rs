@@ -52,7 +52,7 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
     }
 
     fn visitGrouping(&self, expr: &Grouping) -> Result<Value, Error> {
-        todo!()
+        expr.expr.walk(self)
     }
 
     fn visitUnary(&self, expr: &Unary) -> Result<Value, Error> {
