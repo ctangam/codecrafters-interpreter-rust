@@ -66,10 +66,10 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                 }
             }
             TokenValue::Bang => {
-                if let Value::Boolean(b) = right {
-                    Ok(Value::Boolean(!b))
-                } else {
-                    Err(Error::msg(format!("[line {}] Error: Expect boolean.", expr.operator.line)))
+                match right {
+                    Value::Boolean(b) => Ok(Value::Boolean(!b)),
+                    Value::Nil => Ok(Value::Boolean(true)),
+                    _ => Ok(Value::Boolean(false)),
                 }
             }
             _ => unreachable!(),
