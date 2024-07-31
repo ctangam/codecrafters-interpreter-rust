@@ -81,10 +81,10 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
         let right = expr.right.walk(self)?;
         match expr.operator.value {
             TokenValue::Plus => {
-                if let (Value::Number(l), Value::Number(r)) = (left, right) {
-                    Ok(Value::Number(l + r))
-                } else {
-                    Err(Error::msg(format!("[line {}] Error at '{}': Expect number.", expr.operator.line, expr.operator.lexeme)))
+                match (left, right) {
+                    (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l + r)),
+                    (Value::String(l), Value::String(r)) => Ok(Value::String(format!("{}{}", l, r))),
+                    _ => Err(Error::msg(format!("[line {}] Error at '{}': Expect number or string.", expr.operator.line, expr.operator.lexeme)))
                 }
             }
             TokenValue::Minus => {
