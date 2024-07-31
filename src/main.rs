@@ -9,6 +9,7 @@ pub mod expr;
 pub mod parser;
 pub mod lexer;
 pub mod printer;
+pub mod eval;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -65,6 +66,34 @@ fn main() {
                         exit(65);
                     }
                 }
+            }
+        }
+        "evaluate" => {
+            let file_contents = fs::read_to_string(filename).unwrap_or_else(|_| {
+                writeln!(io::stderr(), "Failed to read file {}", filename).unwrap();
+                String::new()
+            });
+            if !file_contents.is_empty() {
+                let (tokens, code) = lexer::scan(file_contents);
+                if code != 0 {
+                    exit(code);
+                }
+                let mut parser = Parser::new(tokens);
+                let exprs = parser.parse();
+
+                match exprs {
+                    Ok(exprs) => {
+                        let interpreter = eval::Interpreter::new();
+                        interpreter.interpret(exprs);
+                    }
+                    Err(errors) => {
+                        for error in errors {
+                            writeln!(io::stderr(), "{}", error).unwrap();
+                        }
+                        exit(65);
+                    }
+                }
+
             }
         }
         _ => {
