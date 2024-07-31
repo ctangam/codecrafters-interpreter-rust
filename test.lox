@@ -1,2 +1,4 @@
-"hello" + " world!"
-"42" + "24"
+"hello" == "world"
+"foo" != "bar"
+"foo" == "foo"
+61 == "61"
