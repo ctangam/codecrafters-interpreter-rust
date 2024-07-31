@@ -1,8 +1,12 @@
 use std::fmt::Display;
 
-use anyhow::{Result, Error};
+use anyhow::{Error, Result};
 
-use crate::{expr::{Assign, Binary, Expr, ExprVisitor, Grouping, Literal, Unary}, token::{Number, TokenValue}, Walkable};
+use crate::{
+    expr::{Assign, Binary, Expr, ExprVisitor, Grouping, Literal, Unary},
+    token::{Number, TokenValue},
+    Walkable,
+};
 
 pub enum Value {
     Nil,
@@ -29,14 +33,19 @@ impl Interpreter {
         Interpreter {}
     }
 
-    pub fn interpret(&self, exprs: Vec<Expr>) {
+    pub fn interpret(&self, exprs: Vec<Expr>) -> Result<Vec<Value>, Vec<Error>> {
+        let mut values = Vec::new();
+        let mut errors = Vec::new();
         for expr in exprs {
-            let value = expr.walk(self);
-            match value {
-                Ok(v) => println!("{}", v),
-                Err(e) => println!("{}", e)
+            match expr.walk(self) {
+                Ok(value) => values.push(value),
+                Err(e) => errors.push(e),
             }
         }
+        if !errors.is_empty() {
+            return Err(std::mem::take(&mut errors));
+        }
+        Ok(values)
     }
 }
 
@@ -62,16 +71,17 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                 if let Value::Number(n) = right {
                     Ok(Value::Number(-n))
                 } else {
-                    Err(Error::msg(format!("Operand must be a number.\n[line {}]", expr.operator.line)))
+                    Err(Error::msg(format!(
+                        "Operand must be a number.\n[line {}]",
+                        expr.operator.line
+                    )))
                 }
             }
-            TokenValue::Bang => {
-                match right {
-                    Value::Boolean(b) => Ok(Value::Boolean(!b)),
-                    Value::Nil => Ok(Value::Boolean(true)),
-                    _ => Ok(Value::Boolean(false)),
-                }
-            }
+            TokenValue::Bang => match right {
+                Value::Boolean(b) => Ok(Value::Boolean(!b)),
+                Value::Nil => Ok(Value::Boolean(true)),
+                _ => Ok(Value::Boolean(false)),
+            },
             _ => unreachable!(),
         }
     }
@@ -80,82 +90,100 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
         let left = expr.left.walk(self)?;
         let right = expr.right.walk(self)?;
         match expr.operator.value {
-            TokenValue::Plus => {
-                match (left, right) {
-                    (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l + r)),
-                    (Value::String(l), Value::String(r)) => Ok(Value::String(format!("{}{}", l, r))),
-                    _ => Err(Error::msg(format!("[line {}] Error at '{}': Expect number or string.", expr.operator.line, expr.operator.lexeme)))
-                }
-            }
+            TokenValue::Plus => match (left, right) {
+                (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l + r)),
+                (Value::String(l), Value::String(r)) => Ok(Value::String(format!("{}{}", l, r))),
+                _ => Err(Error::msg(format!(
+                    "[line {}] Error at '{}': Expect number or string.",
+                    expr.operator.line, expr.operator.lexeme
+                ))),
+            },
             TokenValue::Minus => {
                 if let (Value::Number(l), Value::Number(r)) = (left, right) {
                     Ok(Value::Number(l - r))
                 } else {
-                    Err(Error::msg(format!("[line {}] Error at '{}': Expect number.", expr.operator.line, expr.operator.lexeme)))
+                    Err(Error::msg(format!(
+                        "[line {}] Error at '{}': Expect number.",
+                        expr.operator.line, expr.operator.lexeme
+                    )))
                 }
             }
             TokenValue::Star => {
                 if let (Value::Number(l), Value::Number(r)) = (left, right) {
                     Ok(Value::Number(l * r))
                 } else {
-                    Err(Error::msg(format!("[line {}] Error at '{}': Expect number.", expr.operator.line, expr.operator.lexeme)))
+                    Err(Error::msg(format!(
+                        "[line {}] Error at '{}': Expect number.",
+                        expr.operator.line, expr.operator.lexeme
+                    )))
                 }
             }
             TokenValue::Slash => {
                 if let (Value::Number(l), Value::Number(r)) = (left, right) {
                     Ok(Value::Number(l / r))
                 } else {
-                    Err(Error::msg(format!("[line {}] Error at '{}': Expect number.", expr.operator.line, expr.operator.lexeme)))
+                    Err(Error::msg(format!(
+                        "[line {}] Error at '{}': Expect number.",
+                        expr.operator.line, expr.operator.lexeme
+                    )))
                 }
             }
             TokenValue::Greater => {
                 if let (Value::Number(l), Value::Number(r)) = (left, right) {
                     Ok(Value::Boolean(l > r))
                 } else {
-                    Err(Error::msg(format!("[line {}] Error at '{}': Expect number.", expr.operator.line, expr.operator.lexeme)))
+                    Err(Error::msg(format!(
+                        "[line {}] Error at '{}': Expect number.",
+                        expr.operator.line, expr.operator.lexeme
+                    )))
                 }
             }
             TokenValue::GreaterEqual => {
                 if let (Value::Number(l), Value::Number(r)) = (left, right) {
                     Ok(Value::Boolean(l >= r))
                 } else {
-                    Err(Error::msg(format!("[line {}] Error at '{}': Expect number.", expr.operator.line, expr.operator.lexeme)))
+                    Err(Error::msg(format!(
+                        "[line {}] Error at '{}': Expect number.",
+                        expr.operator.line, expr.operator.lexeme
+                    )))
                 }
             }
             TokenValue::Less => {
                 if let (Value::Number(l), Value::Number(r)) = (left, right) {
                     Ok(Value::Boolean(l < r))
                 } else {
-                    Err(Error::msg(format!("[line {}] Error at '{}': Expect number.", expr.operator.line, expr.operator.lexeme)))
+                    Err(Error::msg(format!(
+                        "[line {}] Error at '{}': Expect number.",
+                        expr.operator.line, expr.operator.lexeme
+                    )))
                 }
             }
             TokenValue::LessEqual => {
                 if let (Value::Number(l), Value::Number(r)) = (left, right) {
                     Ok(Value::Boolean(l <= r))
                 } else {
-                    Err(Error::msg(format!("[line {}] Error at '{}': Expect number.", expr.operator.line, expr.operator.lexeme)))
+                    Err(Error::msg(format!(
+                        "[line {}] Error at '{}': Expect number.",
+                        expr.operator.line, expr.operator.lexeme
+                    )))
                 }
             }
-            TokenValue::EqualEqual => {
-                match (left, right) {
-                    (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l == r)),
-                    (Value::String(l), Value::String(r)) => Ok(Value::Boolean(l == r)),
-                    (Value::Boolean(l), Value::Boolean(r)) => Ok(Value::Boolean(l == r)),
-                    (Value::Nil, Value::Nil) => Ok(Value::Boolean(true)),
+            TokenValue::EqualEqual => match (left, right) {
+                (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l == r)),
+                (Value::String(l), Value::String(r)) => Ok(Value::Boolean(l == r)),
+                (Value::Boolean(l), Value::Boolean(r)) => Ok(Value::Boolean(l == r)),
+                (Value::Nil, Value::Nil) => Ok(Value::Boolean(true)),
 
-                    _ => Ok(Value::Boolean(false)),
-                }
-            }
-            TokenValue::BangEqual => {
-                match (left, right) {
-                    (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l != r)),
-                    (Value::String(l), Value::String(r)) => Ok(Value::Boolean(l != r)),
-                    (Value::Boolean(l), Value::Boolean(r)) => Ok(Value::Boolean(l != r)),
-                    (Value::Nil, Value::Nil) => Ok(Value::Boolean(false)),
+                _ => Ok(Value::Boolean(false)),
+            },
+            TokenValue::BangEqual => match (left, right) {
+                (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l != r)),
+                (Value::String(l), Value::String(r)) => Ok(Value::Boolean(l != r)),
+                (Value::Boolean(l), Value::Boolean(r)) => Ok(Value::Boolean(l != r)),
+                (Value::Nil, Value::Nil) => Ok(Value::Boolean(false)),
 
-                    _ => Ok(Value::Boolean(true)),
-                }
-            }
+                _ => Ok(Value::Boolean(true)),
+            },
             _ => unreachable!(),
         }
     }
