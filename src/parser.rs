@@ -123,11 +123,11 @@ impl Parser {
                         expr: Box::new(expr),
                     }))
                 } else {
-                    Err(Error::msg("Error: Unmatched parentheses."))
+                    Err(Error::msg(format!("[line {}] Error: Expect ')' after expression.", self.peek().line)))
                 }
             }
 
-            _ => Err(Error::msg("Error: Expect expression.")),
+            _ => Err(Error::msg(format!("[line {}] Error at '{}': Expect expression.", self.previous().line, self.previous().lexeme))),
         }
     }
 
