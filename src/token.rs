@@ -1,4 +1,4 @@
-use std::fmt::{Display, Pointer};
+use std::{collections::HashMap, fmt::{Display, Pointer}};
 
 pub struct Token {
     pub value: TokenValue,
@@ -36,7 +36,7 @@ pub enum TokenValue {
     LessEqual,
 
     // Literals.
-    Identifier(String),
+    Identifier,
     String(String),
     Number(Number),
 
@@ -61,6 +61,26 @@ pub enum TokenValue {
 
     Eof,
 }
+
+const KEYWORDS: [(&str, TokenValue); 17] = [
+    ("and", TokenValue::And),
+    ("break", TokenValue::Break),
+    ("class", TokenValue::Class),
+    ("else", TokenValue::Else),
+    ("false", TokenValue::False),
+    ("for", TokenValue::For),
+    ("fun", TokenValue::Fun),
+    ("if", TokenValue::If),
+    ("nil", TokenValue::Nil),
+    ("or", TokenValue::Or),
+    ("print", TokenValue::Print),
+    ("return", TokenValue::Return),
+    ("super", TokenValue::Super),
+    ("this", TokenValue::This),
+    ("true", TokenValue::True),
+    ("var", TokenValue::Var),
+    ("while", TokenValue::While),
+];
 
 impl Display for TokenValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -88,9 +108,9 @@ impl Display for TokenValue {
             TokenValue::Less => write!(f, "LESS"),
             TokenValue::LessEqual => write!(f, "LESS_EQUAL"),
 
-            TokenValue::Identifier(s) => write!(f, "IDENTIFIER"),
-            TokenValue::String(s) => write!(f, "STRING"),
-            TokenValue::Number(n) => write!(f, "NUMBER"),
+            TokenValue::Identifier => write!(f, "IDENTIFIER"),
+            TokenValue::String(_) => write!(f, "STRING"),
+            TokenValue::Number(_) => write!(f, "NUMBER"),
 
             TokenValue::And => write!(f, "AND"),
             TokenValue::Break => write!(f, "BREAK"),
@@ -139,6 +159,7 @@ impl std::fmt::Display for Token {
 }
 
 pub fn scan(source: String) -> (Vec<Token>, i32) {
+    let keywords = HashMap::from(KEYWORDS);
     let mut tokens = Vec::new();
     let mut line = 1;
     let mut code = 0;
@@ -250,6 +271,32 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
                 } else {
                     eprintln!("[line {line}] Error: Unexpected character: {lexeme}");
                     code = 65;
+                }
+            }
+
+            'a'..='z' | 'A'..='Z' | '_' => {
+                let mut lexeme = String::new();
+                lexeme.push(*char);
+                i += 1;
+                loop {
+                    let char = chars.get(i);
+                    if char.is_none() {
+                        break;
+                    }
+                    let char = char.unwrap();
+                    if !char.is_ascii_alphanumeric() && *char != '_' {
+                        break;
+                    }
+                    lexeme.push(*char);
+                    i += 1;
+                }
+                if keywords.contains_key(lexeme.as_str()) {
+                    tokens.push(Token::new(
+                        keywords.get(lexeme.as_str()).unwrap().clone(),
+                        lexeme,
+                    ));
+                } else {
+                    tokens.push(Token::new(TokenValue::Identifier, lexeme));
                 }
             }
 
