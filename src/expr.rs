@@ -64,7 +64,13 @@ pub trait ExprVisitor<T> {
 impl std::fmt::Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Expr::Literal(Literal::Number(n)) => n.fmt(f),
+            Expr::Literal(Literal::Number(n)) => {
+                if n % 1.0 == 0.0 {
+                    write!(f, "{:.1}", n)
+                } else {
+                    write!(f, "{}", n)
+                }
+            },
             Expr::Literal(Literal::String(s)) => s.fmt(f),
             Expr::Literal(Literal::False) => false.fmt(f),
             Expr::Literal(Literal::True) => true.fmt(f),
