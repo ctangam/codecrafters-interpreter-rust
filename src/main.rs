@@ -50,10 +50,20 @@ fn main() {
                     exit(code);
                 }
                 let mut parser = Parser::new(tokens);
-                let exprs = parser.parse().unwrap();
+                let exprs = parser.parse();
 
-                for expr in exprs {
-                    println!("{}", expr);
+                match exprs {
+                    Ok(exprs) => {
+                        for expr in exprs {
+                            println!("{}", expr);
+                        }
+                    }
+                    Err(errors) => {
+                        for error in errors {
+                            writeln!(io::stderr(), "{}", error).unwrap();
+                        }
+                        exit(65);
+                    }
                 }
             }
         }

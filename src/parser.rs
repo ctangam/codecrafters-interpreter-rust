@@ -1,6 +1,6 @@
 use anyhow::{Result, Error};
 
-use crate::{expr::{Expr, Literal, Unary}, token::{Token, TokenValue}};
+use crate::{expr::{Expr, Grouping, Literal, Unary}, token::{Token, TokenValue}};
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -16,7 +16,7 @@ impl Parser {
     pub fn parse(&mut self) -> Result<Vec<Expr>, Vec<Error>> {
         let mut exprs = Vec::new();
         while !self.at_the_end() {
-            match self.unary() {
+            match self.expression() {
                 Ok(expr) => exprs.push(expr),
                 Err(e) => self.errors.push(e),
             }
@@ -25,6 +25,10 @@ impl Parser {
             return Err(std::mem::take(&mut self.errors));
         }
         Ok(exprs)
+    }
+
+    fn expression(&mut self) -> Result<Expr, Error> {
+        self.unary()
     }
 
     // fn factory(&mut self) -> Result<Expr, Error> {
@@ -48,6 +52,16 @@ impl Parser {
             TokenValue::True => Ok(Expr::Literal(Literal::True)),
             TokenValue::False => Ok(Expr::Literal(Literal::False)),
             TokenValue::Nil => Ok(Expr::Literal(Literal::Nil)),
+
+            TokenValue::LeftParen => {
+                let expr = self.expression()?;
+                self.advance();
+                if self.matches(TokenValue::RightParen) {
+                    Ok(Expr::Grouping(Grouping { expr: Box::new(expr) }))
+                } else {
+                    Err(Error::msg("Error: Unmatched parentheses."))
+                }
+            }
 
             _ => todo!(),
         }
