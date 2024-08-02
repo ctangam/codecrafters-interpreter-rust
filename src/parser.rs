@@ -1,6 +1,9 @@
-use anyhow::{Result, Error};
+use anyhow::{Error, Result};
 
-use crate::{expr::{Expr, Grouping, Literal, Unary}, token::{Token, TokenValue}};
+use crate::{
+    expr::{Binary, Expr, Grouping, Literal, Unary},
+    token::{Token, TokenValue},
+};
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -10,7 +13,11 @@ pub struct Parser {
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Parser {
-        Parser { tokens, errors: vec![], current: 0 }
+        Parser {
+            tokens,
+            errors: vec![],
+            current: 0,
+        }
     }
 
     pub fn parse(&mut self) -> Result<Vec<Expr>, Vec<Error>> {
@@ -28,17 +35,73 @@ impl Parser {
     }
 
     fn expression(&mut self) -> Result<Expr, Error> {
-        self.unary()
+        self.equality()
     }
 
-    // fn factory(&mut self) -> Result<Expr, Error> {
-    // }
+    fn equality(&mut self) -> Result<Expr, Error> {
+        let mut left = self.comparison()?;
+        while self.matches(&[TokenValue::BangEqual, TokenValue::EqualEqual]) {
+            let operator = self.previous().clone();
+            let right = self.comparison()?;
+            left = Expr::Binary(Binary {
+                left: Box::new(left),
+                operator,
+                right: Box::new(right),
+            });
+        }
+        Ok(left)
+    }
+
+    fn comparison(&mut self) -> Result<Expr, Error> {
+        let mut left = self.term()?;
+        while self.matches(&[TokenValue::Greater, TokenValue::GreaterEqual, TokenValue::Less, TokenValue::LessEqual]) {
+            let operator = self.previous().clone();
+            let right = self.term()?;
+            left = Expr::Binary(Binary {
+                left: Box::new(left),
+                operator,
+                right: Box::new(right),
+            });
+        }
+        Ok(left)
+    }
+
+    fn term(&mut self) -> Result<Expr, Error> {
+        let mut left = self.factory()?;
+        while self.matches(&[TokenValue::Plus, TokenValue::Minus]) {
+            let operator = self.previous().clone();
+            let right = self.factory()?;
+            left = Expr::Binary(Binary {
+                left: Box::new(left),
+                operator,
+                right: Box::new(right),
+            });
+        }
+        Ok(left)
+    }
+
+    fn factory(&mut self) -> Result<Expr, Error> {
+        let mut left = self.unary()?;
+        while self.matches(&[TokenValue::Star, TokenValue::Slash]) {
+            let operator = self.previous().clone();
+            let right = self.unary()?;
+            left = Expr::Binary(Binary {
+                left: Box::new(left),
+                operator,
+                right: Box::new(right),
+            });
+        }
+        Ok(left)
+    }
 
     fn unary(&mut self) -> Result<Expr, Error> {
-        if self.matches(TokenValue::Minus) || self.matches(TokenValue::Bang) {
-            let operator = self.advance().clone();
+        if self.matches(&[TokenValue::Minus, TokenValue::Bang]) {
+            let operator = self.previous().clone();
             let right = self.unary()?;
-            Ok(Expr::Unary(Unary { operator, right: Box::new(right) }))
+            Ok(Expr::Unary(Unary {
+                operator,
+                right: Box::new(right),
+            }))
         } else {
             self.primary()
         }
@@ -55,9 +118,11 @@ impl Parser {
 
             TokenValue::LeftParen => {
                 let expr = self.expression()?;
-                if self.matches(TokenValue::RightParen) {
+                if self.matches(&[TokenValue::RightParen]) {
                     self.advance();
-                    Ok(Expr::Grouping(Grouping { expr: Box::new(expr) }))
+                    Ok(Expr::Grouping(Grouping {
+                        expr: Box::new(expr),
+                    }))
                 } else {
                     Err(Error::msg("Error: Unmatched parentheses."))
                 }
@@ -67,11 +132,17 @@ impl Parser {
         }
     }
 
-    fn matches(&mut self, expected: TokenValue) -> bool {
+    fn matches(&mut self, expected: &[TokenValue]) -> bool {
         if self.at_the_end() {
             return false;
         }
-        self.peek().value == expected
+
+        if !expected.contains(&self.peek().value) {
+            return false;
+        }
+
+        self.advance();
+        true
     }
 
     fn peek(&self) -> &Token {
