@@ -96,7 +96,7 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                 _ => Err(Error::msg(format!(
                     "Operands must be two numbers or two strings.\n[line {}]",
                     expr.operator.line
-                )))
+                ))),
             },
             TokenValue::Minus => {
                 if let (Value::Number(l), Value::Number(r)) = (left, right) {
