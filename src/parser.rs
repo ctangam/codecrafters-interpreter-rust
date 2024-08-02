@@ -119,7 +119,6 @@ impl Parser {
             TokenValue::LeftParen => {
                 let expr = self.expression()?;
                 if self.matches(&[TokenValue::RightParen]) {
-                    self.advance();
                     Ok(Expr::Grouping(Grouping {
                         expr: Box::new(expr),
                     }))
