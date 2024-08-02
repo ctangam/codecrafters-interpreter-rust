@@ -84,7 +84,20 @@ fn main() {
                 match exprs {
                     Ok(exprs) => {
                         let interpreter = eval::Interpreter::new();
-                        interpreter.interpret(exprs);
+                        let values = interpreter.interpret(exprs);
+                        match values {
+                            Ok(values) => {
+                                for value in values {
+                                    println!("{}", value);
+                                }
+                            }
+                            Err(errors) => {
+                                for error in errors {
+                                    writeln!(io::stderr(), "{}", error).unwrap();
+                                }
+                                exit(65);
+                            }
+                        }
                     }
                     Err(errors) => {
                         for error in errors {
