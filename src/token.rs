@@ -4,7 +4,7 @@ use std::fmt::Display;
 pub struct Token {
     pub value: TokenValue,
     pub lexeme: String,
-    // pub line: u32,
+    pub line: usize,
 }
 
 pub type Number = f64;
@@ -137,11 +137,11 @@ impl Display for TokenValue {
 }
 
 impl Token {
-    pub fn new(value: TokenValue, lexeme: String) -> Token {
+    pub fn new(value: TokenValue, lexeme: String, line: usize) -> Token {
         Token {
             value,
             lexeme,
-            // line,
+            line,
         }
     }
 }

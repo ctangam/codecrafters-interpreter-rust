@@ -11,55 +11,55 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
     let mut i = 0;
     while let Some(char) = chars.get(i) {
         match char {
-            '(' => tokens.push(Token::new(TokenValue::LeftParen, char.to_string())),
-            ')' => tokens.push(Token::new(TokenValue::RightParen, char.to_string())),
-            '{' => tokens.push(Token::new(TokenValue::LeftBrace, char.to_string())),
-            '}' => tokens.push(Token::new(TokenValue::RightBrace, char.to_string())),
-            ',' => tokens.push(Token::new(TokenValue::Comma, char.to_string())),
-            '.' => tokens.push(Token::new(TokenValue::Dot, char.to_string())),
-            '-' => tokens.push(Token::new(TokenValue::Minus, char.to_string())),
-            '+' => tokens.push(Token::new(TokenValue::Plus, char.to_string())),
-            ';' => tokens.push(Token::new(TokenValue::Semicolon, char.to_string())),
-            '*' => tokens.push(Token::new(TokenValue::Star, char.to_string())),
+            '(' => tokens.push(Token::new(TokenValue::LeftParen, char.to_string(), line)),
+            ')' => tokens.push(Token::new(TokenValue::RightParen, char.to_string(), line)),
+            '{' => tokens.push(Token::new(TokenValue::LeftBrace, char.to_string(), line)),
+            '}' => tokens.push(Token::new(TokenValue::RightBrace, char.to_string(), line)),
+            ',' => tokens.push(Token::new(TokenValue::Comma, char.to_string(), line)),
+            '.' => tokens.push(Token::new(TokenValue::Dot, char.to_string(), line)),
+            '-' => tokens.push(Token::new(TokenValue::Minus, char.to_string(), line)),
+            '+' => tokens.push(Token::new(TokenValue::Plus, char.to_string(), line)),
+            ';' => tokens.push(Token::new(TokenValue::Semicolon, char.to_string(), line)),
+            '*' => tokens.push(Token::new(TokenValue::Star, char.to_string(), line)),
             '/' => {
                 if let Some('/') = chars.get(i + 1) {
                     while chars.get(i + 1).is_some_and(|c| *c != '\n') {
                         i += 1;
                     }
                 } else {
-                    tokens.push(Token::new(TokenValue::Slash, char.to_string()))
+                    tokens.push(Token::new(TokenValue::Slash, char.to_string(), line))
                 }
             }
             '=' => {
                 if let Some('=') = chars.get(i + 1) {
-                    tokens.push(Token::new(TokenValue::EqualEqual, "==".to_string()));
+                    tokens.push(Token::new(TokenValue::EqualEqual, "==".to_string(), line));
                     i += 1;
                 } else {
-                    tokens.push(Token::new(TokenValue::Equal, char.to_string()))
+                    tokens.push(Token::new(TokenValue::Equal, char.to_string(), line))
                 }
             }
             '!' => {
                 if let Some('=') = chars.get(i + 1) {
-                    tokens.push(Token::new(TokenValue::BangEqual, "!=".to_string()));
+                    tokens.push(Token::new(TokenValue::BangEqual, "!=".to_string(), line));
                     i += 1;
                 } else {
-                    tokens.push(Token::new(TokenValue::Bang, char.to_string()))
+                    tokens.push(Token::new(TokenValue::Bang, char.to_string(), line))
                 }
             }
             '<' => {
                 if let Some('=') = chars.get(i + 1) {
-                    tokens.push(Token::new(TokenValue::LessEqual, "<=".to_string()));
+                    tokens.push(Token::new(TokenValue::LessEqual, "<=".to_string(), line));
                     i += 1;
                 } else {
-                    tokens.push(Token::new(TokenValue::Less, char.to_string()))
+                    tokens.push(Token::new(TokenValue::Less, char.to_string(), line))
                 }
             }
             '>' => {
                 if let Some('=') = chars.get(i + 1) {
-                    tokens.push(Token::new(TokenValue::GreaterEqual, ">=".to_string()));
+                    tokens.push(Token::new(TokenValue::GreaterEqual, ">=".to_string(), line));
                     i += 1;
                 } else {
-                    tokens.push(Token::new(TokenValue::Greater, char.to_string()))
+                    tokens.push(Token::new(TokenValue::Greater, char.to_string(), line))
                 }
             }
 
@@ -74,7 +74,7 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
                             lexeme.push('"');
                             let literal: String =
                                 lexeme.clone().drain(1..lexeme.len() - 1).collect();
-                            tokens.push(Token::new(TokenValue::String(literal), lexeme));
+                            tokens.push(Token::new(TokenValue::String(literal), lexeme, line));
                             break;
                         }
                         Some('\n') => line += 1,
@@ -108,7 +108,7 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
                         _ => {
                             i -= 1;
                             break;
-                        },
+                        }
                     }
                 }
                 if lexeme.ends_with(".") {
@@ -119,6 +119,7 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
                     tokens.push(Token::new(
                         TokenValue::Number(lexeme.parse().unwrap()),
                         lexeme.to_string(),
+                        line,
                     ));
                 } else {
                     eprintln!("[line {line}] Error: Unexpected character: {lexeme}");
@@ -137,16 +138,17 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
                         _ => {
                             i -= 1;
                             break;
-                        },
+                        }
                     }
                 }
                 if keywords.contains_key(lexeme.as_str()) {
                     tokens.push(Token::new(
                         keywords.get(lexeme.as_str()).unwrap().clone(),
                         lexeme,
+                        line,
                     ));
                 } else {
-                    tokens.push(Token::new(TokenValue::Identifier, lexeme));
+                    tokens.push(Token::new(TokenValue::Identifier, lexeme, line));
                 }
             }
 
@@ -160,6 +162,6 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
         }
         i += 1;
     }
-    tokens.push(Token::new(TokenValue::Eof, "".to_string()));
+    tokens.push(Token::new(TokenValue::Eof, "".to_string(), line));
     (tokens, code)
 }
