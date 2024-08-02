@@ -270,7 +270,7 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
                     tokens.push(Token::new(TokenValue::Number(lexeme.parse().unwrap()), lexeme));
                 } else {
                     eprintln!("[line {line}] Error: Unexpected character: {lexeme}");
-                    code = 65;
+                    // code = 65;
                 }
             }
 
@@ -301,7 +301,7 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
             }
 
             ' ' | '\r' | '\t' => {}
-            
+
             '\n' => line += 1,
             c => {
                 eprintln!("[line {line}] Error: Unexpected character: {c}");
