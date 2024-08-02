@@ -1,6 +1,7 @@
 use std::env;
 use std::fs;
 use std::io::{self, Write};
+use std::process::exit;
 pub mod token;
 
 fn main() {
@@ -25,9 +26,12 @@ fn main() {
 
             // Uncomment this block to pass the first stage
             if !file_contents.is_empty() {
-                let tokens = token::scan(file_contents);
+                let (tokens, code) = token::scan(file_contents);
                 for token in tokens {
                     println!("{}", token);
+                }
+                if code != 0 {
+                    exit(code);
                 }
             } else {
                 println!("EOF  null"); // Placeholder, remove this line when implementing the scanner

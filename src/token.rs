@@ -51,9 +51,10 @@ impl Display for Token {
     }
 }
 
-pub fn scan(source: String) -> Vec<Token> {
+pub fn scan(source: String) -> (Vec<Token>, i32) {
     let mut tokens = Vec::new();
     let mut n = 1;
+    let mut code = 0;
     for char in source.chars() {
         match char {
             '(' => tokens.push(Token::new(TokenType::LEFT_PAREN, Some(char.to_string()), None)),
@@ -68,9 +69,9 @@ pub fn scan(source: String) -> Vec<Token> {
             '*' => tokens.push(Token::new(TokenType::STAR, Some(char.to_string()), None)),
             '/' => tokens.push(Token::new(TokenType::SLASH, Some(char.to_string()), None)),
             '\n' => n += 1,
-            c => eprintln!("[line {n}] Error: Unexpected character: {c}"),
+            c => {eprintln!("[line {n}] Error: Unexpected character: {c}"); code = 65;},
         }
     }
     tokens.push(Token::new(TokenType::EOF, None, None));
-    tokens
+    (tokens, code)
 }
