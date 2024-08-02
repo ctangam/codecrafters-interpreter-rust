@@ -94,17 +94,17 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                 (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l + r)),
                 (Value::String(l), Value::String(r)) => Ok(Value::String(format!("{}{}", l, r))),
                 _ => Err(Error::msg(format!(
-                    "[line {}] Error at '{}': Expect number or string.",
-                    expr.operator.line, expr.operator.lexeme
-                ))),
+                    "Operands must be two numbers or two strings.\n[line {}]",
+                    expr.operator.line
+                )))
             },
             TokenValue::Minus => {
                 if let (Value::Number(l), Value::Number(r)) = (left, right) {
                     Ok(Value::Number(l - r))
                 } else {
                     Err(Error::msg(format!(
-                        "[line {}] Error at '{}': Expect number.",
-                        expr.operator.line, expr.operator.lexeme
+                        "Operands must be numbers.\n[line {}]",
+                        expr.operator.line
                     )))
                 }
             }
@@ -113,8 +113,8 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                     Ok(Value::Number(l * r))
                 } else {
                     Err(Error::msg(format!(
-                        "[line {}] Error at '{}': Expect number.",
-                        expr.operator.line, expr.operator.lexeme
+                        "Operands must be numbers.\n[line {}]",
+                        expr.operator.line
                     )))
                 }
             }
@@ -123,8 +123,8 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                     Ok(Value::Number(l / r))
                 } else {
                     Err(Error::msg(format!(
-                        "[line {}] Error at '{}': Expect number.",
-                        expr.operator.line, expr.operator.lexeme
+                        "Operands must be numbers.\n[line {}]",
+                        expr.operator.line
                     )))
                 }
             }
@@ -133,8 +133,8 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                     Ok(Value::Boolean(l > r))
                 } else {
                     Err(Error::msg(format!(
-                        "[line {}] Error at '{}': Expect number.",
-                        expr.operator.line, expr.operator.lexeme
+                        "Operands must be numbers.\n[line {}]",
+                        expr.operator.line
                     )))
                 }
             }
@@ -143,8 +143,8 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                     Ok(Value::Boolean(l >= r))
                 } else {
                     Err(Error::msg(format!(
-                        "[line {}] Error at '{}': Expect number.",
-                        expr.operator.line, expr.operator.lexeme
+                        "Operands must be numbers.\n[line {}]",
+                        expr.operator.line
                     )))
                 }
             }
@@ -153,8 +153,8 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                     Ok(Value::Boolean(l < r))
                 } else {
                     Err(Error::msg(format!(
-                        "[line {}] Error at '{}': Expect number.",
-                        expr.operator.line, expr.operator.lexeme
+                        "Operands must be numbers.\n[line {}]",
+                        expr.operator.line
                     )))
                 }
             }
@@ -163,8 +163,8 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                     Ok(Value::Boolean(l <= r))
                 } else {
                     Err(Error::msg(format!(
-                        "[line {}] Error at '{}': Expect number.",
-                        expr.operator.line, expr.operator.lexeme
+                        "Operands must be numbers.\n[line {}]",
+                        expr.operator.line
                     )))
                 }
             }
