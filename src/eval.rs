@@ -136,6 +136,22 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                     Err(Error::msg(format!("[line {}] Error at '{}': Expect number.", expr.operator.line, expr.operator.lexeme)))
                 }
             }
+            TokenValue::EqualEqual => {
+                match (left, right) {
+                    (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l == r)),
+                    (Value::String(l), Value::String(r)) => Ok(Value::Boolean(l == r)),
+                    (Value::Boolean(l), Value::Boolean(r)) => Ok(Value::Boolean(l == r)),
+                    _ => Ok(Value::Boolean(false)),
+                }
+            }
+            TokenValue::BangEqual => {
+                match (left, right) {
+                    (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l != r)),
+                    (Value::String(l), Value::String(r)) => Ok(Value::Boolean(l != r)),
+                    (Value::Boolean(l), Value::Boolean(r)) => Ok(Value::Boolean(l != r)),
+                    _ => Ok(Value::Boolean(true)),
+                }
+            }
             _ => unreachable!(),
         }
     }
