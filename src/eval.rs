@@ -62,7 +62,7 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                 if let Value::Number(n) = right {
                     Ok(Value::Number(-n))
                 } else {
-                    Err(Error::msg(format!("[line {}] Error: Expect number.", expr.operator.line)))
+                    Err(Error::msg(format!("[line {}] Error at '{}': Expect number.", expr.operator.line, expr.operator.lexeme)))
                 }
             }
             TokenValue::Bang => {
@@ -77,7 +77,67 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
     }
 
     fn visit_binary(&self, expr: &Binary) -> Result<Value, Error> {
-        todo!()
+        let left = expr.left.walk(self)?;
+        let right = expr.right.walk(self)?;
+        match expr.operator.value {
+            TokenValue::Plus => {
+                if let (Value::Number(l), Value::Number(r)) = (left, right) {
+                    Ok(Value::Number(l + r))
+                } else {
+                    Err(Error::msg(format!("[line {}] Error at '{}': Expect number.", expr.operator.line, expr.operator.lexeme)))
+                }
+            }
+            TokenValue::Minus => {
+                if let (Value::Number(l), Value::Number(r)) = (left, right) {
+                    Ok(Value::Number(l - r))
+                } else {
+                    Err(Error::msg(format!("[line {}] Error at '{}': Expect number.", expr.operator.line, expr.operator.lexeme)))
+                }
+            }
+            TokenValue::Star => {
+                if let (Value::Number(l), Value::Number(r)) = (left, right) {
+                    Ok(Value::Number(l * r))
+                } else {
+                    Err(Error::msg(format!("[line {}] Error at '{}': Expect number.", expr.operator.line, expr.operator.lexeme)))
+                }
+            }
+            TokenValue::Slash => {
+                if let (Value::Number(l), Value::Number(r)) = (left, right) {
+                    Ok(Value::Number(l / r))
+                } else {
+                    Err(Error::msg(format!("[line {}] Error at '{}': Expect number.", expr.operator.line, expr.operator.lexeme)))
+                }
+            }
+            TokenValue::Greater => {
+                if let (Value::Number(l), Value::Number(r)) = (left, right) {
+                    Ok(Value::Boolean(l > r))
+                } else {
+                    Err(Error::msg(format!("[line {}] Error at '{}': Expect number.", expr.operator.line, expr.operator.lexeme)))
+                }
+            }
+            TokenValue::GreaterEqual => {
+                if let (Value::Number(l), Value::Number(r)) = (left, right) {
+                    Ok(Value::Boolean(l >= r))
+                } else {
+                    Err(Error::msg(format!("[line {}] Error at '{}': Expect number.", expr.operator.line, expr.operator.lexeme)))
+                }
+            }
+            TokenValue::Less => {
+                if let (Value::Number(l), Value::Number(r)) = (left, right) {
+                    Ok(Value::Boolean(l < r))
+                } else {
+                    Err(Error::msg(format!("[line {}] Error at '{}': Expect number.", expr.operator.line, expr.operator.lexeme)))
+                }
+            }
+            TokenValue::LessEqual => {
+                if let (Value::Number(l), Value::Number(r)) = (left, right) {
+                    Ok(Value::Boolean(l <= r))
+                } else {
+                    Err(Error::msg(format!("[line {}] Error at '{}': Expect number.", expr.operator.line, expr.operator.lexeme)))
+                }
+            }
+            _ => unreachable!(),
+        }
     }
 
     fn visit_assign(&self, expr: &Assign) -> Result<Value, Error> {
