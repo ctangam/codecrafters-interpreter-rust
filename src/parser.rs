@@ -1,7 +1,9 @@
+use std::alloc::System;
+
 use anyhow::{Error, Result};
 
 use crate::{
-    expr::{Binary, Expr, Grouping, Literal, Unary},
+    expr::{Assign, Binary, Expr, Grouping, Literal, Unary},
     token::{Token, TokenValue},
 };
 
@@ -35,7 +37,19 @@ impl Parser {
     }
 
     fn expression(&mut self) -> Result<Expr, Error> {
-        self.equality()
+        self.assign()
+    }
+
+    fn assign(&mut self) -> Result<Expr, Error> {
+        println!("assign: {}", self.peek().value);
+        if self.peek_next().is_some_and(|token| token.value == TokenValue::Equal) {
+            let name = self.advance().clone();
+            self.advance();
+            let value = self.assign()?;
+            return Ok(Expr::Assign(Assign { name, value: Box::new(value) }));
+        } else {
+            return self.equality();
+        }
     }
 
     fn equality(&mut self) -> Result<Expr, Error> {
