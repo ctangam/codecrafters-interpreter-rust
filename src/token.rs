@@ -114,6 +114,29 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
             } else {
                 tokens.push(Token::new(TokenType::GREATER, Some(char.to_string()), None))
             },
+
+            '"' => {
+                let mut string = String::new();
+                i += 1;
+                loop {
+                    let char = chars.get(i);
+                    if char.is_none() {
+                        eprintln!("[line {line}] Error: Unterminated string.");
+                        code = 65;
+                        break;
+                    }
+                    let char = char.unwrap();
+                    if *char == '"' {
+                        tokens.push(Token::new(TokenType::STRING, Some(string), None));
+                        break;
+                    }
+                    if *char == '\n' {
+                        line += 1;
+                    }
+                    string.push(*char);
+                    i += 1;
+                }
+            },
             
             ' ' | '\r' | '\t' => {},
             '\n' => line += 1,
