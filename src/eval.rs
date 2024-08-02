@@ -62,7 +62,7 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                 if let Value::Number(n) = right {
                     Ok(Value::Number(-n))
                 } else {
-                    Err(Error::msg(format!("[line {}] Error at '{}': Expect number.", expr.operator.line, expr.operator.lexeme)))
+                    Err(Error::msg(format!("Operand must be a number.\n[line {}]", expr.operator.line)))
                 }
             }
             TokenValue::Bang => {
@@ -141,6 +141,8 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                     (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l == r)),
                     (Value::String(l), Value::String(r)) => Ok(Value::Boolean(l == r)),
                     (Value::Boolean(l), Value::Boolean(r)) => Ok(Value::Boolean(l == r)),
+                    (Value::Nil, Value::Nil) => Ok(Value::Boolean(true)),
+
                     _ => Ok(Value::Boolean(false)),
                 }
             }
@@ -149,6 +151,8 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                     (Value::Number(l), Value::Number(r)) => Ok(Value::Boolean(l != r)),
                     (Value::String(l), Value::String(r)) => Ok(Value::Boolean(l != r)),
                     (Value::Boolean(l), Value::Boolean(r)) => Ok(Value::Boolean(l != r)),
+                    (Value::Nil, Value::Nil) => Ok(Value::Boolean(false)),
+
                     _ => Ok(Value::Boolean(true)),
                 }
             }
