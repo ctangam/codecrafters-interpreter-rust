@@ -63,7 +63,7 @@ impl Parser {
                 }
             }
 
-            _ => todo!(),
+            _ => Err(Error::msg("Error: Expect expression.")),
         }
     }
 
