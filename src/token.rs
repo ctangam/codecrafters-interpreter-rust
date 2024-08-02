@@ -153,7 +153,11 @@ impl std::fmt::Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.value {
             TokenValue::String(s) => write!(f, "{} {} {}", self.value, self.lexeme, s),
-            TokenValue::Number(n) => write!(f, "{} {} {:.1}", self.value, self.lexeme, n),
+            TokenValue::Number(n) => if n % 1.0 == 0.0 {
+                write!(f, "{} {} {:.1}", self.value, self.lexeme, n)
+            } else {
+                write!(f, "{} {} {}", self.value, self.lexeme, n)
+            },
             _ => write!(f, "{} {} null", self.value, self.lexeme),
         }
     }
