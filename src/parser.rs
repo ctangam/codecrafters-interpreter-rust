@@ -41,7 +41,6 @@ impl Parser {
     }
 
     fn assign(&mut self) -> Result<Expr, Error> {
-        println!("assign: {}", self.peek().value);
         if self.peek_next().is_some_and(|token| token.value == TokenValue::Equal) {
             let name = self.advance().clone();
             self.advance();
