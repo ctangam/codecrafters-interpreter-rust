@@ -55,8 +55,8 @@ impl Parser {
 
             TokenValue::LeftParen => {
                 let expr = self.expression()?;
-                self.advance();
                 if self.matches(TokenValue::RightParen) {
+                    self.advance();
                     Ok(Expr::Grouping(Grouping { expr: Box::new(expr) }))
                 } else {
                     Err(Error::msg("Error: Unmatched parentheses."))
