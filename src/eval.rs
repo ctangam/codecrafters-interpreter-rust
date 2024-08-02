@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use anyhow::{Result, Error};
 
-use crate::{expr::{Assign, Binary, Expr, ExprVisitor, Grouping, Literal, Unary}, token::Number, Walkable};
+use crate::{expr::{Assign, Binary, Expr, ExprVisitor, Grouping, Literal, Unary}, token::{Number, TokenValue}, Walkable};
 
 pub enum Value {
     Nil,
@@ -41,7 +41,7 @@ impl Interpreter {
 }
 
 impl ExprVisitor<Result<Value, Error>> for Interpreter {
-    fn visitLiteral(&self, expr: &Literal) -> Result<Value, Error> {
+    fn visit_literal(&self, expr: &Literal) -> Result<Value, Error> {
         match expr {
             Literal::String(s) => Ok(Value::String(s.clone())),
             Literal::Number(n) => Ok(Value::Number(n.clone())),
@@ -51,19 +51,36 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
         }
     }
 
-    fn visitGrouping(&self, expr: &Grouping) -> Result<Value, Error> {
+    fn visit_grouping(&self, expr: &Grouping) -> Result<Value, Error> {
         expr.expr.walk(self)
     }
 
-    fn visitUnary(&self, expr: &Unary) -> Result<Value, Error> {
+    fn visit_unary(&self, expr: &Unary) -> Result<Value, Error> {
+        let right = expr.right.walk(self)?;
+        match expr.operator.value {
+            TokenValue::Minus => {
+                if let Value::Number(n) = right {
+                    Ok(Value::Number(-n))
+                } else {
+                    Err(Error::msg(format!("[line {}] Error: Expect number.", expr.operator.line)))
+                }
+            }
+            TokenValue::Bang => {
+                if let Value::Boolean(b) = right {
+                    Ok(Value::Boolean(!b))
+                } else {
+                    Err(Error::msg(format!("[line {}] Error: Expect boolean.", expr.operator.line)))
+                }
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    fn visit_binary(&self, expr: &Binary) -> Result<Value, Error> {
         todo!()
     }
 
-    fn visitBinary(&self, expr: &Binary) -> Result<Value, Error> {
-        todo!()
-    }
-
-    fn visitAssign(&self, expr: &Assign) -> Result<Value, Error> {
+    fn visit_assign(&self, expr: &Assign) -> Result<Value, Error> {
         todo!()
     }
 }
