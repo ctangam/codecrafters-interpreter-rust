@@ -26,6 +26,15 @@ enum TokenType {
         COMMA,
         DOT,
         EQUAL,
+        EQUAL_EQUAL,
+        BANG,
+        BANG_EQUAL,
+        GREATER,
+        GREATER_EQUAL,
+        LESS,
+        LESS_EQUAL,
+        AND,
+        OR,
         EOF,
 
 }
@@ -55,7 +64,10 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
     let mut tokens = Vec::new();
     let mut n = 1;
     let mut code = 0;
-    for char in source.chars() {
+    let chars = source.chars().collect::<Vec<_>>();
+    let mut i = 0;
+    loop {
+        let char = chars[i];
         match char {
             '(' => tokens.push(Token::new(TokenType::LEFT_PAREN, Some(char.to_string()), None)),
             ')' => tokens.push(Token::new(TokenType::RIGHT_PAREN, Some(char.to_string()), None)),
@@ -68,8 +80,25 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
             ';' => tokens.push(Token::new(TokenType::SEMICOLON, Some(char.to_string()), None)),
             '*' => tokens.push(Token::new(TokenType::STAR, Some(char.to_string()), None)),
             '/' => tokens.push(Token::new(TokenType::SLASH, Some(char.to_string()), None)),
+            '=' => if source.chars().nth(i + 1) == Some('=') {
+                tokens.push(Token::new(TokenType::EQUAL_EQUAL, Some("==".to_string()), None));
+                i += 1;
+            } else {
+                tokens.push(Token::new(TokenType::EQUAL, Some(char.to_string()), None))
+            },
+            '!' => if source.chars().nth(i + 1) == Some('=') {
+                tokens.push(Token::new(TokenType::BANG_EQUAL, Some("!=".to_string()), None));
+                i += 1;
+            } else {
+                tokens.push(Token::new(TokenType::BANG, Some(char.to_string()), None))
+            },
+            ' ' | '\r' | '\t' => {},
             '\n' => n += 1,
             c => {eprintln!("[line {n}] Error: Unexpected character: {c}"); code = 65;},
+        }
+        i += 1;
+        if i >= chars.len() {
+            break;
         }
     }
     tokens.push(Token::new(TokenType::EOF, None, None));
