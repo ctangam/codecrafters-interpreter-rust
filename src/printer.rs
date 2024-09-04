@@ -1,4 +1,4 @@
-use crate::expr::{Assign, Binary, ExprVisitor, Grouping, Literal, Unary};
+use crate::{expr::{Assign, Binary, ExprVisitor, Grouping, Literal, Unary}, stmt::{Print, StmtVisitor}, Walkable};
 
 pub struct AstPrinter;
 
@@ -29,3 +29,5 @@ impl ExprVisitor<()> for AstPrinter {
         todo!()
     }
 }
+
+

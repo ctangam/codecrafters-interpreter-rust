@@ -3,9 +3,7 @@ use std::fmt::Display;
 use anyhow::{Error, Result};
 
 use crate::{
-    expr::{Assign, Binary, Expr, ExprVisitor, Grouping, Literal, Unary},
-    token::{Number, TokenValue},
-    Walkable,
+    expr::{Assign, Binary, Expr, ExprVisitor, Grouping, Literal, Unary}, stmt::{Stmt, StmtVisitor}, token::{Number, TokenValue}, Walkable
 };
 
 pub enum Value {
@@ -46,6 +44,21 @@ impl Interpreter {
             return Err(std::mem::take(&mut errors));
         }
         Ok(values)
+    }
+
+    pub fn execute(&self, stmts: Vec<Stmt>) -> Result<(), Vec<Error>> {
+        let mut values = Vec::new();
+        let mut errors = Vec::new();
+        for stmt in stmts {
+            match stmt.walk(self) {
+                Ok(value) => values.push(value),
+                Err(e) => errors.push(e),
+            }
+        }
+        if !errors.is_empty() {
+            return Err(std::mem::take(&mut errors));
+        }
+        Ok(())
     }
 }
 
@@ -190,5 +203,13 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
 
     fn visit_assign(&self, expr: &Assign) -> Result<Value, Error> {
         todo!()
+    }
+}
+
+impl StmtVisitor<Result<(), Error>> for Interpreter {
+    fn visit_print(&self, stmt: &crate::stmt::Print) -> Result<(), Error> {
+        let value = stmt.expr.walk(self)?;
+        println!("{}", value);
+        Ok(())
     }
 }
