@@ -212,12 +212,15 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
     }
 
     fn visit_variable(&self, expr: &crate::expr::Variable) -> Result<Value, Error> {
-        let value = self.env
+        self.env
             .borrow()
             .get(&expr.name.lexeme)
             .cloned()
-            .unwrap_or(Value::Nil);
-        Ok(value)
+            .ok_or(Error::msg(format!(
+                "Undefined variable '{}'.\n[line {}]",
+                expr.name.lexeme,
+                expr.name.line
+            )))
     }
 }
 
@@ -236,9 +239,9 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
     fn visit_var(&self, stmt: &Var) -> Result<(), Error> {
         let value = stmt
             .initializer
-            .as_ref()
-            .and_then(|expr| expr.walk(self).ok());
+            .as_ref();
         if let Some(value) = value {
+            let value = value.walk(self)?;
             self.env
                 .borrow_mut()
                 .entry(stmt.name.lexeme.clone())
