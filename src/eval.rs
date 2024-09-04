@@ -4,7 +4,7 @@ use anyhow::{Error, Result};
 
 use crate::{
     expr::{Assign, Binary, Expr, ExprVisitor, Grouping, Literal, Unary},
-    stmt::{Expression, Print, Stmt, StmtVisitor, Var},
+    stmt::{Block, Expression, Print, Stmt, StmtVisitor, Var},
     token::{Number, TokenValue},
     Walkable,
 };
@@ -54,7 +54,7 @@ impl Interpreter {
         Ok(values)
     }
 
-    pub fn execute(&self, stmts: Vec<Stmt>) -> Result<(), Error> {
+    pub fn execute(&self, stmts: &Vec<Stmt>) -> Result<(), Error> {
         for stmt in stmts {
             stmt.walk(self)?;
         }
@@ -253,6 +253,11 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
                 .entry(stmt.name.lexeme.clone())
                 .or_insert(Value::Nil);
         }
+        Ok(())
+    }
+
+    fn visit_block(&self, stmt: &Block) -> Result<(), Error> {
+        self.execute(&stmt.statements);
         Ok(())
     }
 }

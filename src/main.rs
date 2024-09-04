@@ -126,7 +126,7 @@ fn main() {
                 match stmts {
                     Ok(stmts) => {
                         let interpreter = Interpreter::new();
-                        let result = interpreter.execute(stmts);
+                        let result = interpreter.execute(&stmts);
                         match result {
                             Ok(_) => (),
                             Err(error) => {

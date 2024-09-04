@@ -4,7 +4,7 @@ use anyhow::{Error, Result};
 
 use crate::{
     expr::{Assign, Binary, Expr, Grouping, Literal, Unary, Variable},
-    stmt::{Expression, Print, Stmt, Var},
+    stmt::{Block, Expression, Print, Stmt, Var},
     token::{Token, TokenValue},
 };
 
@@ -33,6 +33,7 @@ impl Parser {
         match self.peek().value {
             TokenValue::Print => self.print_stmt(),
             TokenValue::Var => self.var_stmt(),
+            TokenValue::LeftBrace => self.block(),
             _ => self.expr_stmt(),
         }
     }
@@ -68,6 +69,17 @@ impl Parser {
         };
         self.advance();
         let stmt = Stmt::Var(Var { name, initializer });
+        Ok(stmt)
+    }
+
+    fn block(&mut self) -> Result<Stmt, Error> {
+        self.advance();
+        let mut stmts = Vec::new();
+        while self.peek().value != TokenValue::RightBrace && !self.at_the_end() {
+            stmts.push(self.declaration()?);
+        }
+        self.advance();
+        let stmt = Stmt::Block(Block { statements: stmts });
         Ok(stmt)
     }
 }
