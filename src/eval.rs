@@ -247,6 +247,11 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
                 .entry(stmt.name.lexeme.clone())
                 .and_modify(|v| *v = value.clone())
                 .or_insert(value.clone());
+        } else {
+            self.env
+                .borrow_mut()
+                .entry(stmt.name.lexeme.clone())
+                .or_insert(Value::Nil);
         }
         Ok(())
     }
