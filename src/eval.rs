@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, fmt::Display};
+use std::{borrow::BorrowMut, cell::RefCell, collections::HashMap, fmt::Display};
 
 use anyhow::{Error, Result};
 
@@ -257,7 +257,9 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
     }
 
     fn visit_block(&self, stmt: &Block) -> Result<(), Error> {
-        self.execute(&stmt.statements);
+        let old_env = self.env.clone();
+        let _ = self.execute(&stmt.statements);
+        self.env.swap(&old_env);
         Ok(())
     }
 }
