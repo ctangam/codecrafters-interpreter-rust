@@ -3,14 +3,15 @@ use std::fs;
 use std::io::{self, Write};
 use std::process::exit;
 
+use eval::Interpreter;
 use parser::Parser;
-pub mod token;
-pub mod expr;
-pub mod parser;
-pub mod lexer;
-pub mod printer;
 pub mod eval;
+pub mod expr;
+pub mod lexer;
+pub mod parser;
+pub mod printer;
 pub mod stmt;
+pub mod token;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -84,7 +85,7 @@ fn main() {
 
                 match exprs {
                     Ok(exprs) => {
-                        let interpreter = eval::Interpreter::new();
+                        let interpreter = Interpreter::new();
                         let values = interpreter.interpret(exprs);
                         match values {
                             Ok(values) => {
@@ -107,7 +108,6 @@ fn main() {
                         exit(65);
                     }
                 }
-
             }
         }
         "run" => {
@@ -121,18 +121,16 @@ fn main() {
                     exit(code);
                 }
                 let mut parser = Parser::new(tokens);
-                let exprs = parser.parse2();
+                let stmts = parser.parse2();
 
-                match exprs {
+                match stmts {
                     Ok(stmts) => {
-                        let interpreter = eval::Interpreter::new();
-                        let values = interpreter.execute(stmts);
-                        match values {
+                        let interpreter = Interpreter::new();
+                        let result = interpreter.execute(stmts);
+                        match result {
                             Ok(_) => (),
-                            Err(errors) => {
-                                for error in errors {
-                                    writeln!(io::stderr(), "{}", error).unwrap();
-                                }
+                            Err(error) => {
+                                writeln!(io::stderr(), "{}", error).unwrap();
                                 exit(70);
                             }
                         }
@@ -144,7 +142,6 @@ fn main() {
                         exit(65);
                     }
                 }
-
             }
         }
         _ => {

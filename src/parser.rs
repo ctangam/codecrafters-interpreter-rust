@@ -3,7 +3,7 @@ use std::alloc::System;
 use anyhow::{Error, Result};
 
 use crate::{
-    expr::{Assign, Binary, Expr, Grouping, Literal, Unary}, stmt::{Print, Stmt}, token::{Token, TokenValue}
+    expr::{Assign, Binary, Expr, Grouping, Literal, Unary}, stmt::{Expression, Print, Stmt}, token::{Token, TokenValue}
 };
 
 pub struct Parser {
@@ -50,16 +50,24 @@ impl Parser {
     }
 
     fn declaration(&mut self) -> Result<Stmt, Error> {
-        match self.advance().value {
+        match self.peek().value {
             TokenValue::Print => self.print_stmt(),
-            _ => panic!("unimplemented"),
+            _ => self.expr_stmt(),
         }
     }
 
     fn print_stmt(&mut self) -> Result<Stmt, Error> {
+        self.advance();
         let expr = self.expression()?;
         self.advance();
         let stmt = Stmt::Print(Print { expr: Box::new(expr) });
+        Ok(stmt)
+    }
+
+    fn expr_stmt(&mut self) -> Result<Stmt, Error> {
+        let expr = self.expression()?;
+        self.advance();
+        let stmt = Stmt::Expression(Expression { expr: Box::new(expr) });
         Ok(stmt)
     }
 
