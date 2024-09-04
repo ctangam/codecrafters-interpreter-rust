@@ -1,8 +1,6 @@
 {
-    var hello = 88;
+    var bar = 11;
+    var world = 11;
     {
-        var foo = 88;
-        print foo;
-    }
-    print hello;
+        print bar + world;
 }

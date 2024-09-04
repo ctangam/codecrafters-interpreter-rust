@@ -78,6 +78,12 @@ impl Parser {
         while self.peek().value != TokenValue::RightBrace && !self.at_the_end() {
             stmts.push(self.declaration()?);
         }
+        if self.peek().value != TokenValue::RightBrace {
+            return Err(Error::msg(format!(
+                "[line {}] Error at end: Expect '}}' .",
+                self.peek().line
+            )));
+        }
         self.advance();
         let stmt = Stmt::Block(Block { statements: stmts });
         Ok(stmt)
