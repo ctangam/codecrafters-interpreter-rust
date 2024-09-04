@@ -6,6 +6,7 @@ pub enum Expr {
     Unary(Unary),
     Binary(Binary),
     Assign(Assign),
+    Variable(Variable),
 }
 
 pub enum Literal {
@@ -36,6 +37,10 @@ pub struct Assign {
     pub value: Box<Expr>,
 }
 
+pub struct Variable {
+    pub name: Token,
+}
+
 impl<V: ExprVisitor<T>, T> Walkable<V, T> for Expr {
     fn walk(&self, visitor: &V) -> T {
         match self {
@@ -44,6 +49,7 @@ impl<V: ExprVisitor<T>, T> Walkable<V, T> for Expr {
             Expr::Unary(unary) => visitor.visit_unary(unary),
             Expr::Binary(binary) => visitor.visit_binary(binary),
             Expr::Assign(assign) => visitor.visit_assign(assign),
+            Expr::Variable(variable) => visitor.visit_variable(variable),
         }
     }
 }
@@ -58,6 +64,8 @@ pub trait ExprVisitor<T> {
     fn visit_binary(&self, expr: &Binary) -> T;
 
     fn visit_assign(&self, expr: &Assign) -> T;
+
+    fn visit_variable(&self, expr: &Variable) -> T;
 }
 
 
@@ -86,7 +94,7 @@ impl std::fmt::Display for Expr {
             
             Expr::Grouping(Grouping { expr }) => f.write_fmt(format_args!("(group {})", expr)),
             Expr::Assign(Assign { name, value }) => write!(f, "(= {} {})", name.lexeme, value),
-        
+            Expr::Variable(Variable { name }) => name.lexeme.fmt(f),
         }
     }
 }

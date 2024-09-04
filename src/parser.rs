@@ -3,13 +3,73 @@ use std::alloc::System;
 use anyhow::{Error, Result};
 
 use crate::{
-    expr::{Assign, Binary, Expr, Grouping, Literal, Unary}, stmt::{Expression, Print, Stmt}, token::{Token, TokenValue}
+    expr::{Assign, Binary, Expr, Grouping, Literal, Unary, Variable},
+    stmt::{Expression, Print, Stmt, Var},
+    token::{Token, TokenValue},
 };
 
 pub struct Parser {
     tokens: Vec<Token>,
     errors: Vec<Error>,
     current: usize,
+}
+
+impl Parser {
+    pub fn parse2(&mut self) -> Result<Vec<Stmt>, Vec<Error>> {
+        let mut stmts = Vec::new();
+        while !self.at_the_end() {
+            match self.declaration() {
+                Ok(stmt) => stmts.push(stmt),
+                Err(e) => self.errors.push(e),
+            }
+        }
+        if !self.errors.is_empty() {
+            return Err(std::mem::take(&mut self.errors));
+        }
+        Ok(stmts)
+    }
+
+    fn declaration(&mut self) -> Result<Stmt, Error> {
+        match self.peek().value {
+            TokenValue::Print => self.print_stmt(),
+            TokenValue::Var => self.var_stmt(),
+            _ => self.expr_stmt(),
+        }
+    }
+
+    fn print_stmt(&mut self) -> Result<Stmt, Error> {
+        self.advance();
+        let expr = self.expression()?;
+        self.advance();
+        let stmt = Stmt::Print(Print {
+            expr: Box::new(expr),
+        });
+        Ok(stmt)
+    }
+
+    fn expr_stmt(&mut self) -> Result<Stmt, Error> {
+        let expr = self.expression()?;
+        self.advance();
+        let stmt = Stmt::Expression(Expression {
+            expr: Box::new(expr),
+        });
+        Ok(stmt)
+    }
+
+    fn var_stmt(&mut self) -> Result<Stmt, Error> {
+        self.advance();
+        let name = self.advance().clone();
+        let initializer = if self.peek().value == TokenValue::Equal {
+            self.advance();
+            let expr = self.expression()?;
+            Some(Box::new(expr))
+        } else {
+            None
+        };
+        self.advance();
+        let stmt = Stmt::Var(Var { name, initializer });
+        Ok(stmt)
+    }
 }
 
 impl Parser {
@@ -35,52 +95,22 @@ impl Parser {
         Ok(exprs)
     }
 
-    pub fn parse2(&mut self) -> Result<Vec<Stmt>, Vec<Error>> {
-        let mut stmts = Vec::new();
-        while !self.at_the_end() {
-            match self.declaration() {
-                Ok(stmt) => stmts.push(stmt),
-                Err(e) => self.errors.push(e),
-            }
-        }
-        if !self.errors.is_empty() {
-            return Err(std::mem::take(&mut self.errors));
-        }
-        Ok(stmts)
-    }
-
-    fn declaration(&mut self) -> Result<Stmt, Error> {
-        match self.peek().value {
-            TokenValue::Print => self.print_stmt(),
-            _ => self.expr_stmt(),
-        }
-    }
-
-    fn print_stmt(&mut self) -> Result<Stmt, Error> {
-        self.advance();
-        let expr = self.expression()?;
-        self.advance();
-        let stmt = Stmt::Print(Print { expr: Box::new(expr) });
-        Ok(stmt)
-    }
-
-    fn expr_stmt(&mut self) -> Result<Stmt, Error> {
-        let expr = self.expression()?;
-        self.advance();
-        let stmt = Stmt::Expression(Expression { expr: Box::new(expr) });
-        Ok(stmt)
-    }
-
     fn expression(&mut self) -> Result<Expr, Error> {
         self.assign()
     }
 
     fn assign(&mut self) -> Result<Expr, Error> {
-        if self.peek_next().is_some_and(|token| token.value == TokenValue::Equal) {
+        if self
+            .peek_next()
+            .is_some_and(|token| token.value == TokenValue::Equal)
+        {
             let name = self.advance().clone();
             self.advance();
             let value = self.assign()?;
-            return Ok(Expr::Assign(Assign { name, value: Box::new(value) }));
+            return Ok(Expr::Assign(Assign {
+                name,
+                value: Box::new(value),
+            }));
         } else {
             return self.equality();
         }
@@ -102,7 +132,12 @@ impl Parser {
 
     fn comparison(&mut self) -> Result<Expr, Error> {
         let mut left = self.term()?;
-        while self.matches(&[TokenValue::Greater, TokenValue::GreaterEqual, TokenValue::Less, TokenValue::LessEqual]) {
+        while self.matches(&[
+            TokenValue::Greater,
+            TokenValue::GreaterEqual,
+            TokenValue::Less,
+            TokenValue::LessEqual,
+        ]) {
             let operator = self.previous().clone();
             let right = self.term()?;
             left = Expr::Binary(Binary {
@@ -171,11 +206,20 @@ impl Parser {
                         expr: Box::new(expr),
                     }))
                 } else {
-                    Err(Error::msg(format!("[line {}] Error: Expect ')' after expression.", self.peek().line)))
+                    Err(Error::msg(format!(
+                        "[line {}] Error: Expect ')' after expression.",
+                        self.peek().line
+                    )))
                 }
             }
 
-            _ => Err(Error::msg(format!("[line {}] Error at '{}': Expect expression.", self.previous().line, self.previous().lexeme))),
+            TokenValue::Identifier => Ok(Expr::Variable(Variable { name: self.previous().clone() })),
+
+            _ => Err(Error::msg(format!(
+                "[line {}] Error at '{}': Expect expression.",
+                self.previous().line,
+                self.previous().lexeme
+            ))),
         }
     }
 

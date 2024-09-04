@@ -1,11 +1,15 @@
-use std::fmt::Display;
+use std::{cell::RefCell, collections::HashMap, fmt::Display};
 
 use anyhow::{Error, Result};
 
 use crate::{
-    expr::{Assign, Binary, Expr, ExprVisitor, Grouping, Literal, Unary}, stmt::{Stmt, StmtVisitor}, token::{Number, TokenValue}, Walkable
+    expr::{Assign, Binary, Expr, ExprVisitor, Grouping, Literal, Unary},
+    stmt::{Expression, Print, Stmt, StmtVisitor, Var},
+    token::{Number, TokenValue},
+    Walkable,
 };
 
+#[derive(Clone)]
 pub enum Value {
     Nil,
     Boolean(bool),
@@ -24,11 +28,15 @@ impl Display for Value {
     }
 }
 
-pub struct Interpreter {}
+pub struct Interpreter {
+    env: RefCell<HashMap<String, Value>>,
+}
 
 impl Interpreter {
     pub fn new() -> Interpreter {
-        Interpreter {}
+        Interpreter {
+            env: RefCell::new(HashMap::new()),
+        }
     }
 
     pub fn interpret(&self, exprs: Vec<Expr>) -> Result<Vec<Value>, Vec<Error>> {
@@ -194,19 +202,49 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
     }
 
     fn visit_assign(&self, expr: &Assign) -> Result<Value, Error> {
-        todo!()
+        let new_value = expr.value.walk(self)?;
+        self.env
+            .borrow_mut()
+            .entry(expr.name.lexeme.clone())
+            .and_modify(|value| *value = new_value.clone())
+            .or_insert(new_value.clone());
+        Ok(new_value)
+    }
+
+    fn visit_variable(&self, expr: &crate::expr::Variable) -> Result<Value, Error> {
+        let value = self.env
+            .borrow()
+            .get(&expr.name.lexeme)
+            .cloned()
+            .unwrap_or(Value::Nil);
+        Ok(value)
     }
 }
 
 impl StmtVisitor<Result<(), Error>> for Interpreter {
-    fn visit_print(&self, stmt: &crate::stmt::Print) -> Result<(), Error> {
+    fn visit_print(&self, stmt: &Print) -> Result<(), Error> {
         let value = stmt.expr.walk(self)?;
         println!("{}", value);
         Ok(())
     }
 
-    fn visit_expression(&self, stmt: &crate::stmt::Expression) -> Result<(), Error> {
+    fn visit_expression(&self, stmt: &Expression) -> Result<(), Error> {
         stmt.expr.walk(self)?;
+        Ok(())
+    }
+
+    fn visit_var(&self, stmt: &Var) -> Result<(), Error> {
+        let value = stmt
+            .initializer
+            .as_ref()
+            .and_then(|expr| expr.walk(self).ok());
+        if let Some(value) = value {
+            self.env
+                .borrow_mut()
+                .entry(stmt.name.lexeme.clone())
+                .and_modify(|v| *v = value.clone())
+                .or_insert(value.clone());
+        }
         Ok(())
     }
 }
