@@ -77,7 +77,11 @@ pub fn scan(source: String) -> (Vec<Token>, i32) {
                             tokens.push(Token::new(TokenValue::String(literal), lexeme, line));
                             break;
                         }
-                        Some('\n') => line += 1,
+                        Some('\n') => {
+                            line += 1;
+                            lexeme.push('\n');
+                            i += 1;
+                        }
                         Some(char) => {
                             lexeme.push(*char);
                             i += 1;
