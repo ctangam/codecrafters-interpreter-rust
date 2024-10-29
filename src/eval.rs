@@ -259,7 +259,7 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
     fn visit_block(&self, stmt: &Block) -> Result<(), Error> {
         let old_env = self.env.clone();
         let _ = self.execute(&stmt.statements);
-        // self.env.swap(&old_env);
+        self.env.borrow_mut().retain(|k, _| old_env.borrow().contains_key(k));
         Ok(())
     }
 
