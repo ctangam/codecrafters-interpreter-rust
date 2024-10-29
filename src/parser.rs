@@ -41,17 +41,17 @@ impl Parser {
 
     fn if_stmt(&mut self) -> Result<Stmt, Error> {
         self.advance();
-        let condition = self.expression()?;
-        let then_branch = self.declaration()?;
-        // let else_branch = if self.matches(&[TokenValue::Else]) {
-        //     self.advance();
-        //     Some(Box::new(self.statement()?))
-        // } else {
-        //     None
-        // };
+        let condition = Box::new(self.expression()?);
+        let then_branch = Box::new(self.declaration()?);
+        let else_branch = if self.matches(&[TokenValue::Else]) {
+            Some(Box::new(self.declaration()?))
+        } else {
+            None
+        };
         let stmt = Stmt::If(If {
-            condition: Box::new(condition),
-            block: Box::new(then_branch),
+            condition,
+            then_branch,
+            else_branch,
         });
         Ok(stmt)
     }

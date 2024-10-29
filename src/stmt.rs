@@ -27,7 +27,8 @@ pub struct Block {
 
 pub struct If {
     pub condition: Box<Expr>,
-    pub block: Box<Stmt>,
+    pub then_branch: Box<Stmt>,
+    pub else_branch: Option<Box<Stmt>>,
 }
 
 impl<V: StmtVisitor<T>, T> Walkable<V, T> for Stmt {

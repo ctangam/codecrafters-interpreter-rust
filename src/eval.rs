@@ -279,7 +279,9 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
 
     fn visit_if(&self, stmt: &If) -> Result<(), Error> {
         if let Value::Boolean(true) = stmt.condition.walk(self)? {
-            stmt.block.walk(self)?;
+            stmt.then_branch.walk(self)?;
+        } else if let Some(else_branch) = &stmt.else_branch {
+            else_branch.walk(self)?;
         }
         Ok(())
     }
