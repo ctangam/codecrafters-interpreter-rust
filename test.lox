@@ -1,20 +1,5 @@
-
-var bar = "global bar";
-var world = "global world";
-var hello = "global hello";
-{
-  var bar = "outer bar";
-  var world = "outer world";
-  {
-    var bar = "inner bar";
-    print bar;
-    print world;
-    print hello;
-  }
-  print bar;
-  print world;
-  print hello;
-}
-print bar;
-print world;
-print hello;
+var stage = "unknown";
+var age = 50;
+if (age < 18) { stage = "child"; print stage; }
+if (age >= 18) { stage = "adult"; print stage; }
+print stage;

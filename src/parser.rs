@@ -4,7 +4,7 @@ use anyhow::{Error, Result};
 
 use crate::{
     expr::{Assign, Binary, Expr, Grouping, Literal, Unary, Variable},
-    stmt::{Block, Expression, Print, Stmt, Var},
+    stmt::{Block, Expression, If, Print, Stmt, Var},
     token::{Token, TokenValue},
 };
 
@@ -34,8 +34,26 @@ impl Parser {
             TokenValue::Print => self.print_stmt(),
             TokenValue::Var => self.var_stmt(),
             TokenValue::LeftBrace => self.block(),
+            TokenValue::If => self.if_stmt(),
             _ => self.expr_stmt(),
         }
+    }
+
+    fn if_stmt(&mut self) -> Result<Stmt, Error> {
+        self.advance();
+        let condition = self.expression()?;
+        let then_branch = self.declaration()?;
+        // let else_branch = if self.matches(&[TokenValue::Else]) {
+        //     self.advance();
+        //     Some(Box::new(self.statement()?))
+        // } else {
+        //     None
+        // };
+        let stmt = Stmt::If(If {
+            condition: Box::new(condition),
+            block: Box::new(then_branch),
+        });
+        Ok(stmt)
     }
 
     fn print_stmt(&mut self) -> Result<Stmt, Error> {

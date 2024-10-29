@@ -4,7 +4,7 @@ use anyhow::{Error, Result};
 
 use crate::{
     expr::{Assign, Binary, Expr, ExprVisitor, Grouping, Literal, Unary},
-    stmt::{Block, Expression, Print, Stmt, StmtVisitor, Var},
+    stmt::{Block, Expression, If, Print, Stmt, StmtVisitor, Var},
     token::{Number, TokenValue},
     Walkable,
 };
@@ -259,7 +259,14 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
     fn visit_block(&self, stmt: &Block) -> Result<(), Error> {
         let old_env = self.env.clone();
         let _ = self.execute(&stmt.statements);
-        self.env.swap(&old_env);
+        // self.env.swap(&old_env);
+        Ok(())
+    }
+
+    fn visit_if(&self, stmt: &If) -> Result<(), Error> {
+        if let Value::Boolean(true) = stmt.condition.walk(self)? {
+            stmt.block.walk(self)?;
+        }
         Ok(())
     }
 }
