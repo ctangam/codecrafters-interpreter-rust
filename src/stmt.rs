@@ -6,6 +6,7 @@ pub enum Stmt {
     Var(Var),
     Block(Block),
     If(If),
+    While(While),
 }
 
 pub struct Print {
@@ -31,6 +32,11 @@ pub struct If {
     pub else_branch: Option<Box<Stmt>>,
 }
 
+pub struct While {
+    pub condition: Box<Expr>,
+    pub body: Box<Stmt>,
+}
+
 impl<V: StmtVisitor<T>, T> Walkable<V, T> for Stmt {
     fn walk(&self, visitor: &V) -> T {
         match self {
@@ -39,6 +45,7 @@ impl<V: StmtVisitor<T>, T> Walkable<V, T> for Stmt {
             Stmt::Var(var) => visitor.visit_var(var),
             Stmt::Block(block) => visitor.visit_block(block),
             Stmt::If(if_stmt) => visitor.visit_if(if_stmt),
+            Stmt::While(while_stmt) => visitor.visit_while(while_stmt),
         }
     }
 }
@@ -54,5 +61,7 @@ pub trait StmtVisitor<T> {
     fn visit_block(&self, stmt: &Block) -> T;
 
     fn visit_if(&self, stmt: &If) -> T;
+
+    fn visit_while(&self, stmt: &While) -> T;
     
 }

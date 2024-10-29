@@ -9,7 +9,7 @@ use anyhow::{Error, Result};
 
 use crate::{
     expr::{Assign, Binary, Expr, ExprVisitor, Grouping, Literal, Unary},
-    stmt::{Block, Expression, If, Print, Stmt, StmtVisitor, Var},
+    stmt::{Block, Expression, If, Print, Stmt, StmtVisitor, Var, While},
     token::{Number, TokenValue},
     Walkable,
 };
@@ -297,6 +297,13 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
             stmt.then_branch.walk(self)?;
         } else if let Some(else_branch) = &stmt.else_branch {
             else_branch.walk(self)?;
+        }
+        Ok(())
+    }
+
+    fn visit_while(&self, stmt: &While) -> Result<(), Error> {
+        while Value::Boolean(false) != stmt.condition.walk(self)? {
+            stmt.body.walk(self)?;
         }
         Ok(())
     }
