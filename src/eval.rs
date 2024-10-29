@@ -210,9 +210,12 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
             }
             TokenValue::And => match (left, right) {
                 (Value::Boolean(l), Value::Boolean(r)) => Ok(Value::Boolean(l && r)),
-                (Value::Boolean(_), v) => Ok(v),
-                (v, Value::Boolean(_)) => Ok(v),
-                _ => Ok(Value::Boolean(false)),
+                (Value::Boolean(false), _) => Ok(Value::Boolean(false)),
+                (Value::Boolean(true), v) => Ok(v),
+                (_, Value::Boolean(r)) => Ok(Value::Boolean(r)),
+                (Value::Nil, _) => Ok(Value::Boolean(false)),
+                (_, Value::Nil) => Ok(Value::Boolean(false)),
+                (_, r) => Ok(r),
             },
             _ => unreachable!(),
         }

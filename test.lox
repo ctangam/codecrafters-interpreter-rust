@@ -1,32 +1,23 @@
+if (false and "bad") print "foo";
+if (nil and "bad") print "foo";
 
-if (false or "ok") print "baz1";
-if (nil or "ok") print "baz2";
+if (true and "hello") print "hello";
+if (97 and "baz") print "baz";
+if ("baz" and "baz") print "baz";
+if ("" and "bar") print "bar";
+print false and 1;
+print true and 1;
+print 23 and "hello" and false;
 
-if (false or false) print "world";
-if (true or "world") print "world";
-
-if (24 or "bar") print "bar";
-if ("bar" or "bar") print "bar";
-
-
-print 41 or true;
-print false or 41;
-print false or false or true;
-
-print false or false;
-print false or false or false;
-print true or true or true or true;
-
-
-var a = "hello";
-var b = "hello";
-(a = false) or (b = true) or (a = "hello");
+print 23 and true;
+print 23 and "hello" and 23;
+var a = "quz";
+var b = "quz";
+(a = true) and (b = false) and (a = "bad");
 print a;
 print b;
-
-
 var stage = "unknown";
-var age = 23;
+var age = 14;
 if (age < 18) { stage = "child"; }
 if (age >= 18) { stage = "adult"; }
 print stage;
