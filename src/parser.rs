@@ -148,8 +148,36 @@ impl Parser {
                 value: Box::new(value),
             }));
         } else {
-            return self.equality();
+            return self.logical_or();
         }
+    }
+
+    fn logical_or(&mut self) -> Result<Expr, Error> {
+        let mut left = self.logical_and()?;
+        while self.matches(&[TokenValue::Or]) {
+            let operator = self.previous().clone();
+            let right = self.logical_and()?;
+            left = Expr::Binary(Binary {
+                left: Box::new(left),
+                operator,
+                right: Box::new(right),
+            });
+        }
+        Ok(left)
+    }
+
+    fn logical_and(&mut self) -> Result<Expr, Error> {
+        let mut left = self.equality()?;
+        while self.matches(&[TokenValue::And]) {
+            let operator = self.previous().clone();
+            let right = self.equality()?;
+            left = Expr::Binary(Binary {
+                left: Box::new(left),
+                operator,
+                right: Box::new(right),
+            });
+        }
+        Ok(left)
     }
 
     fn equality(&mut self) -> Result<Expr, Error> {

@@ -14,7 +14,7 @@ use crate::{
     Walkable,
 };
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Value {
     Nil,
     Boolean(bool),
@@ -105,8 +105,8 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
     }
 
     fn visit_binary(&self, expr: &Binary) -> Result<Value, Error> {
-        let left = expr.left.walk(self)?;
         let right = expr.right.walk(self)?;
+        let left = expr.left.walk(self)?;
         match expr.operator.value {
             TokenValue::Plus => match (left, right) {
                 (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l + r)),
@@ -202,6 +202,18 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
 
                 _ => Ok(Value::Boolean(true)),
             },
+            TokenValue::Or => match (left, right) {
+                (Value::Boolean(l), Value::Boolean(r)) => Ok(Value::Boolean(l || r)),
+                (Value::Boolean(_), v) => Ok(v),
+                (v, Value::Boolean(_)) => Ok(v),
+                _ => Ok(Value::Boolean(true)),
+            }
+            TokenValue::And => match (left, right) {
+                (Value::Boolean(l), Value::Boolean(r)) => Ok(Value::Boolean(l && r)),
+                (Value::Boolean(_), v) => Ok(v),
+                (v, Value::Boolean(_)) => Ok(v),
+                _ => Ok(Value::Boolean(false)),
+            },
             _ => unreachable!(),
         }
     }
@@ -278,7 +290,7 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
     }
 
     fn visit_if(&self, stmt: &If) -> Result<(), Error> {
-        if let Value::Boolean(true) = stmt.condition.walk(self)? {
+        if Value::Boolean(false) != stmt.condition.walk(self)? {
             stmt.then_branch.walk(self)?;
         } else if let Some(else_branch) = &stmt.else_branch {
             else_branch.walk(self)?;
