@@ -1,5 +1,13 @@
+{
+  var foo = "before";
+  {
+    var foo = "after";
+    print foo; 
+  }
+  print foo;
+}
 var stage = "unknown";
 var age = 50;
-if (age < 18) { stage = "child"; print stage; }
-if (age >= 18) { stage = "adult"; print stage; }
+if (age < 18) { stage = "child"; }
+if (age >= 18) { stage = "adult"; }
 print stage;

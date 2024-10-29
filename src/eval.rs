@@ -1,4 +1,9 @@
-use std::{borrow::BorrowMut, cell::RefCell, collections::HashMap, fmt::Display};
+use std::{
+    borrow::BorrowMut,
+    cell::{Ref, RefCell},
+    collections::HashMap,
+    fmt::Display,
+};
 
 use anyhow::{Error, Result};
 
@@ -9,7 +14,7 @@ use crate::{
     Walkable,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Value {
     Nil,
     Boolean(bool),
@@ -29,13 +34,13 @@ impl Display for Value {
 }
 
 pub struct Interpreter {
-    env: RefCell<HashMap<String, Value>>,
+    env: RefCell<Vec<HashMap<String, Value>>>,
 }
 
 impl Interpreter {
     pub fn new() -> Interpreter {
         Interpreter {
-            env: RefCell::new(HashMap::new()),
+            env: RefCell::new(vec![HashMap::new()]),
         }
     }
 
@@ -203,23 +208,30 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
 
     fn visit_assign(&self, expr: &Assign) -> Result<Value, Error> {
         let new_value = expr.value.walk(self)?;
-        self.env
+        if let Some(v) = self
+            .env
             .borrow_mut()
-            .entry(expr.name.lexeme.clone())
-            .and_modify(|value| *value = new_value.clone())
-            .or_insert(new_value.clone());
+            .iter_mut()
+            .rev()
+            .filter_map(|env| env.get_mut(&expr.name.lexeme))
+            .nth(0)
+        {
+            *v = new_value.clone();
+        }
         Ok(new_value)
     }
 
     fn visit_variable(&self, expr: &crate::expr::Variable) -> Result<Value, Error> {
         self.env
             .borrow()
-            .get(&expr.name.lexeme)
+            .iter()
+            .rev()
+            .filter_map(|env| env.get(&expr.name.lexeme))
+            .nth(0)
             .cloned()
             .ok_or(Error::msg(format!(
                 "Undefined variable '{}'.\n[line {}]",
-                expr.name.lexeme,
-                expr.name.line
+                expr.name.lexeme, expr.name.line
             )))
     }
 }
@@ -237,19 +249,21 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
     }
 
     fn visit_var(&self, stmt: &Var) -> Result<(), Error> {
-        let value = stmt
-            .initializer
-            .as_ref();
+        let value = stmt.initializer.as_ref();
         if let Some(value) = value {
             let value = value.walk(self)?;
             self.env
                 .borrow_mut()
+                .last_mut()
+                .unwrap()
                 .entry(stmt.name.lexeme.clone())
                 .and_modify(|v| *v = value.clone())
                 .or_insert(value.clone());
         } else {
             self.env
                 .borrow_mut()
+                .last_mut()
+                .unwrap()
                 .entry(stmt.name.lexeme.clone())
                 .or_insert(Value::Nil);
         }
@@ -257,9 +271,9 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
     }
 
     fn visit_block(&self, stmt: &Block) -> Result<(), Error> {
-        let old_env = self.env.clone();
+        self.env.borrow_mut().push(HashMap::new());
         let _ = self.execute(&stmt.statements);
-        self.env.borrow_mut().retain(|k, _| old_env.borrow().contains_key(k));
+        self.env.borrow_mut().pop();
         Ok(())
     }
 
