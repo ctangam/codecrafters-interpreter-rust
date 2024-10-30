@@ -1,5 +1,6 @@
 use crate::{token::Token, Walkable};
 
+#[derive(Debug)]
 pub enum Expr {
     Literal(Literal),
     Grouping(Grouping),
@@ -9,6 +10,7 @@ pub enum Expr {
     Variable(Variable),
 }
 
+#[derive(Debug)]
 pub enum Literal {
     String(String),
     Number(f64),
@@ -17,26 +19,31 @@ pub enum Literal {
     Nil
 }
 
+#[derive(Debug)]
 pub struct Grouping {
     pub expr: Box<Expr>,
 }
 
+#[derive(Debug)]
 pub struct Unary {
     pub operator: Token,
     pub right: Box<Expr>,
 }
 
+#[derive(Debug)]
 pub struct Binary {
     pub left: Box<Expr>,
     pub operator: Token,
     pub right: Box<Expr>,
 }
 
+#[derive(Debug)]
 pub struct Assign {
     pub name: Token,
     pub value: Box<Expr>,
 }
 
+#[derive(Debug)]
 pub struct Variable {
     pub name: Token,
 }

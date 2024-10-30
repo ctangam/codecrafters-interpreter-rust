@@ -4,7 +4,7 @@ use anyhow::{Error, Result};
 
 use crate::{
     expr::{Assign, Binary, Expr, Grouping, Literal, Unary, Variable},
-    stmt::{Block, Expression, If, Print, Stmt, Var, While},
+    stmt::{Block, Expression, For, If, Print, Stmt, Var, While},
     token::{Token, TokenValue},
 };
 
@@ -36,18 +36,45 @@ impl Parser {
             TokenValue::LeftBrace => self.block(),
             TokenValue::If => self.if_stmt(),
             TokenValue::While => self.while_stmt(),
+            TokenValue::For => self.for_stmt(),
             _ => self.expr_stmt(),
         }
+    }
+
+    fn for_stmt(&mut self) -> Result<Stmt, Error> {
+        self.advance();
+        self.advance();
+        let init = if self.matches(&[TokenValue::Semicolon]) {
+            None
+        } else {
+            Some(Box::new(self.declaration()?))
+        };
+
+        let condition = Box::new(self.expression()?);
+        self.advance();
+
+        let update = if self.peek().value != TokenValue::RightParen {
+            Some(Box::new(self.expression()?))
+        } else {
+            None
+        };
+        self.advance();
+
+        let body = Box::new(self.declaration()?);
+        let stmt = Stmt::For(For {
+            init,
+            condition,
+            update,
+            body,
+        });
+        Ok(stmt)
     }
 
     fn while_stmt(&mut self) -> Result<Stmt, Error> {
         self.advance();
         let condition = Box::new(self.expression()?);
         let body = Box::new(self.declaration()?);
-        let stmt = Stmt::While(While {
-            condition,
-            body,
-        });
+        let stmt = Stmt::While(While { condition, body });
         Ok(stmt)
     }
 
@@ -289,7 +316,9 @@ impl Parser {
                 }
             }
 
-            TokenValue::Identifier => Ok(Expr::Variable(Variable { name: self.previous().clone() })),
+            TokenValue::Identifier => Ok(Expr::Variable(Variable {
+                name: self.previous().clone(),
+            })),
 
             _ => Err(Error::msg(format!(
                 "[line {}] Error at '{}': Expect expression.",
