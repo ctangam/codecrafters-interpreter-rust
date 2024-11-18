@@ -10,6 +10,7 @@ pub enum Stmt {
     While(While),
     For(For),
     Func(Func),
+    Return(Return),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -61,6 +62,11 @@ pub struct Func {
     pub body: Vec<Stmt>,
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub struct Return {
+    pub value: Option<Expr>,
+}
+
 impl<V: StmtVisitor<T>, T> Walkable<V, T> for Stmt {
     fn walk(&self, visitor: &V) -> T {
         match self {
@@ -72,6 +78,7 @@ impl<V: StmtVisitor<T>, T> Walkable<V, T> for Stmt {
             Stmt::While(while_stmt) => visitor.visit_while(while_stmt),
             Stmt::For(for_stmt) => visitor.visit_for(for_stmt),
             Stmt::Func(func) => visitor.visit_func(func),
+            Stmt::Return(ret) => visitor.visit_return(ret),
         }
     }
 }
@@ -92,4 +99,6 @@ pub trait StmtVisitor<T> {
     fn visit_for(&self, stmt: &For) -> T;
 
     fn visit_func(&self, stmt: &Func) -> T;
+
+    fn visit_return(&self, stmt: &Return) -> T;
 }

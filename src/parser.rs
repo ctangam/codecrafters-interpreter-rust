@@ -2,7 +2,7 @@ use anyhow::{Error, Result};
 
 use crate::{
     expr::{Assign, Binary, Call, Expr, Grouping, Literal, Unary, Variable},
-    stmt::{Block, Expression, For, Func, If, Print, Stmt, Var, While},
+    stmt::{Block, Expression, For, Func, If, Print, Return, Stmt, Var, While},
     token::{Token, TokenValue},
 };
 
@@ -36,8 +36,28 @@ impl Parser {
             TokenValue::While => self.while_stmt(),
             TokenValue::For => self.for_stmt(),
             TokenValue::Fun => self.func_stmt(),
+            TokenValue::Return => self.return_stmt(),
             _ => self.expr_stmt(),
         }
+    }
+
+    fn return_stmt(&mut self) -> Result<Stmt, Error> {
+        self.advance();
+        let value = if self.peek().value != TokenValue::Semicolon {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+        if self.peek().value != TokenValue::Semicolon {
+            return Err(Error::msg(format!(
+                "[line {}] Error at '{}': Expect ';' after value.",
+                self.peek().line,
+                self.peek().lexeme
+            )));
+        }
+        self.advance();
+        let stmt = Stmt::Return(Return { value });
+        Ok(stmt)
     }
 
     fn func_stmt(&mut self) -> Result<Stmt, Error> {
@@ -49,9 +69,17 @@ impl Parser {
         while self.peek().value != TokenValue::RightParen && !self.at_the_end() {
             params.push(self.advance().clone());
             match self.peek().value {
-                TokenValue::Comma => {self.advance();},
+                TokenValue::Comma => {
+                    self.advance();
+                }
                 TokenValue::RightParen => break,
-                _ => return Err(Error::msg(format!("[line {}] Error at '{}': Expect ')' after paramters.", self.peek().line, self.peek().lexeme))),
+                _ => {
+                    return Err(Error::msg(format!(
+                        "[line {}] Error at '{}': Expect ')' after paramters.",
+                        self.peek().line,
+                        self.peek().lexeme
+                    )))
+                }
             }
         }
         self.advance();

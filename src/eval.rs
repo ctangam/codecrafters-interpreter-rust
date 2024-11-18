@@ -283,7 +283,16 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                 self.env.borrow_mut().push(new_env);
 
                 body.iter().for_each(|stmt| stmt.walk(self).unwrap());
-                return Ok(Value::Nil);
+
+                let ret = self
+                    .env
+                    .borrow_mut()
+                    .pop()
+                    .unwrap()
+                    .get("return")
+                    .unwrap_or(&Value::Nil)
+                    .clone();
+                return Ok(ret);
             }
 
             Err(Error::msg(format!(
@@ -375,6 +384,22 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
                 params: stmt.params.clone(),
                 body: stmt.body.clone(),
             }));
+        Ok(())
+    }
+
+    fn visit_return(&self, stmt: &crate::stmt::Return) -> Result<(), Error> {
+        let value = stmt.value.as_ref();
+        if let Some(value) = value {
+            let value = value.walk(self)?;
+            self.env
+                .borrow_mut()
+                .last_mut()
+                .unwrap()
+                .entry("return".to_string())
+                .and_modify(|v| *v = value.clone())
+                .or_insert(value.clone());
+        }
+
         Ok(())
     }
 }
