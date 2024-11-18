@@ -1,6 +1,6 @@
 use crate::{stmt::Expression, token::Token, Walkable};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
     Literal(Literal),
     Grouping(Grouping),
@@ -11,7 +11,7 @@ pub enum Expr {
     Call(Call),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Literal {
     String(String),
     Number(f64),
@@ -20,36 +20,36 @@ pub enum Literal {
     Nil,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Grouping {
     pub expr: Box<Expr>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Unary {
     pub operator: Token,
     pub right: Box<Expr>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Binary {
     pub left: Box<Expr>,
     pub operator: Token,
     pub right: Box<Expr>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Assign {
     pub name: Token,
     pub value: Box<Expr>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Variable {
     pub name: Token,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Call {
     pub callee: Token,
     pub arguments: Vec<Expr>,

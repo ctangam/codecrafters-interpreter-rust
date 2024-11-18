@@ -4,7 +4,7 @@ use anyhow::{Error, Result};
 
 use crate::{
     expr::{Assign, Binary, Call, Expr, Grouping, Literal, Unary, Variable},
-    stmt::{Block, Expression, For, If, Print, Stmt, Var, While},
+    stmt::{Block, Expression, For, Func, If, Print, Stmt, Var, While},
     token::{Token, TokenValue},
 };
 
@@ -37,8 +37,46 @@ impl Parser {
             TokenValue::If => self.if_stmt(),
             TokenValue::While => self.while_stmt(),
             TokenValue::For => self.for_stmt(),
+            TokenValue::Fun => self.func_stmt(),
             _ => self.expr_stmt(),
         }
+    }
+
+    fn func_stmt(&mut self) -> Result<Stmt, Error> {
+        self.advance();
+        let name = self.advance().clone();
+        self.advance();
+        let mut params = Vec::new();
+        while self.peek().value != TokenValue::RightParen {
+            params.push(self.advance().clone());
+            self.advance();
+            if self.peek().value == TokenValue::Comma {
+                self.advance();
+            }
+        }
+        if self.peek().value != TokenValue::RightParen {
+            return Err(Error::msg(format!(
+                "[line {}] Error at end: Expect ')' .",
+                self.peek().line
+            )));
+        }
+        self.advance();
+
+        self.advance();
+        let mut body = Vec::new();
+        while self.peek().value != TokenValue::RightBrace && !self.at_the_end() {
+            body.push(self.declaration()?);
+        }
+        if self.peek().value != TokenValue::RightBrace {
+            return Err(Error::msg(format!(
+                "[line {}] Error at end: Expect '}}' .",
+                self.peek().line
+            )));
+        }
+        self.advance();
+
+        let stmt = Stmt::Func(Func { name, params, body });
+        Ok(stmt)
     }
 
     fn for_stmt(&mut self) -> Result<Stmt, Error> {

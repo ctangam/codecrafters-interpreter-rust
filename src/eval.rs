@@ -5,7 +5,7 @@ use anyhow::{Error, Result};
 use crate::{
     expr::{Assign, Binary, Expr, ExprVisitor, Grouping, Literal, Unary},
     stmt::{Block, Expression, For, If, Print, Stmt, StmtVisitor, Var, While},
-    token::{Number, TokenValue},
+    token::{Number, Token, TokenValue},
     Walkable,
 };
 
@@ -15,6 +15,7 @@ pub enum Value {
     Boolean(bool),
     Number(Number),
     String(String),
+    Function(Vec<Token>, Vec<Stmt>),
 }
 
 impl Display for Value {
@@ -24,6 +25,7 @@ impl Display for Value {
             Value::Boolean(b) => write!(f, "{}", b),
             Value::Number(n) => write!(f, "{}", n),
             Value::String(s) => write!(f, "{}", s),
+            Value::Function(_, _) => write!(f, "function"),
         }
     }
 }
@@ -246,6 +248,8 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
     }
 
     fn visit_call(&self, expr: &crate::expr::Call) -> Result<Value, Error> {
+        use crate::eval::Value::Function;
+
         if expr.callee.lexeme == "clock" {
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::SystemTime::UNIX_EPOCH)
@@ -253,6 +257,35 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                 .as_secs();
             Ok(Value::Number(now as f64))
         } else {
+            let value = self
+                .env
+                .borrow()
+                .last()
+                .and_then(|env| env.get(&expr.callee.lexeme))
+                .cloned();
+            if let Some(Function(params, stmts)) = value {
+                if params.len() != expr.arguments.len() {
+                    return Err(Error::msg(format!(
+                        "Expected {} arguments but got {}.\n[line {}]",
+                        params.len(),
+                        expr.arguments.len(),
+                        expr.callee.line
+                    )));
+                }
+                let mut new_env = HashMap::new();
+                expr.arguments
+                    .iter()
+                    .zip(params.iter())
+                    .for_each(|(arg, param)| {
+                        new_env.insert(param.lexeme.clone(), arg.walk(self).unwrap());
+                    });
+
+                self.env.borrow_mut().push(new_env);
+
+                stmts.iter().for_each(|stmt| stmt.walk(self).unwrap());
+                return Ok(Value::Nil);
+            }
+
             Err(Error::msg(format!(
                 "Undefined function '{}'.\n[line {}]",
                 expr.callee.lexeme, expr.callee.line
@@ -328,6 +361,16 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
                 update.walk(self)?;
             }
         }
+        Ok(())
+    }
+
+    fn visit_func(&self, stmt: &crate::stmt::Func) -> Result<(), Error> {
+        self.env
+            .borrow_mut()
+            .last_mut()
+            .unwrap()
+            .entry(stmt.name.lexeme.clone())
+            .or_insert(Value::Function(stmt.params.clone(), stmt.body.clone()));
         Ok(())
     }
 }
