@@ -48,18 +48,21 @@ impl Parser {
         let mut params = Vec::new();
         while self.peek().value != TokenValue::RightParen && !self.at_the_end() {
             params.push(self.advance().clone());
-            if self.peek().value == TokenValue::Comma {
-                self.advance();
+            match self.peek().value {
+                TokenValue::Comma => {self.advance();},
+                TokenValue::RightParen => break,
+                _ => return Err(Error::msg(format!("[line {}] Error at '{}': Expect ')' after paramters.", self.peek().line, self.peek().lexeme))),
             }
-        }
-        if self.peek().value != TokenValue::RightParen {
-            return Err(Error::msg(format!(
-                "[line {}] Error at end: Expect ')' .",
-                self.peek().line
-            )));
         }
         self.advance();
 
+        if self.peek().value != TokenValue::LeftBrace {
+            return Err(Error::msg(format!(
+                "[line {}] Error at '{}': Expect '{{' before function body.",
+                self.peek().line,
+                self.peek().lexeme
+            )));
+        }
         self.advance();
         let mut body = Vec::new();
         while self.peek().value != TokenValue::RightBrace && !self.at_the_end() {
@@ -134,6 +137,13 @@ impl Parser {
     fn print_stmt(&mut self) -> Result<Stmt, Error> {
         self.advance();
         let expr = self.expression()?;
+        if self.peek().value != TokenValue::Semicolon {
+            return Err(Error::msg(format!(
+                "[line {}] Error at '{}': Expect ';' after value.",
+                self.peek().line,
+                self.peek().lexeme
+            )));
+        }
         self.advance();
         let stmt = Stmt::Print(Print {
             expr: Box::new(expr),
@@ -359,23 +369,24 @@ impl Parser {
                     let mut arguments = Vec::new();
                     while self.peek().value != TokenValue::RightParen && !self.at_the_end() {
                         arguments.push(self.expression()?);
-                        if self.peek().value == TokenValue::Comma {
-                            self.advance();
+                        match self.peek().value {
+                            TokenValue::Comma => {
+                                self.advance();
+                            }
+                            TokenValue::RightParen => break,
+                            _ => {
+                                return Err(Error::msg(format!(
+                                    "[line {}] Error at '{}': Expect ')' after parameters.",
+                                    self.peek().line,
+                                    self.peek().lexeme
+                                )));
+                            }
                         }
-                    }
-                    if self.peek().value != TokenValue::RightParen {
-                        return Err(Error::msg(format!(
-                            "[line {}] Error at '{}': Expect ')' after expression.",
-                            self.peek().line,
-                            self.peek().lexeme
-                        )));
                     }
                     self.advance();
                     Ok(Expr::Call(Call { callee, arguments }))
                 } else {
-                    Ok(Expr::Variable(Variable {
-                        name: callee,
-                    }))
+                    Ok(Expr::Variable(Variable { name: callee }))
                 }
             }
 
