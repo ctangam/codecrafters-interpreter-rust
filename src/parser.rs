@@ -3,7 +3,7 @@ use std::alloc::System;
 use anyhow::{Error, Result};
 
 use crate::{
-    expr::{Assign, Binary, Expr, Grouping, Literal, Unary, Variable},
+    expr::{Assign, Binary, Call, Expr, Grouping, Literal, Unary, Variable},
     stmt::{Block, Expression, For, If, Print, Stmt, Var, While},
     token::{Token, TokenValue},
 };
@@ -316,9 +316,33 @@ impl Parser {
                 }
             }
 
-            TokenValue::Identifier => Ok(Expr::Variable(Variable {
-                name: self.previous().clone(),
-            })),
+            TokenValue::Identifier => {
+                let callee = self.previous().clone();
+                if self.peek().value == TokenValue::LeftParen {
+                    self.advance();
+                    let mut arguments = Vec::new();
+                    while self.peek().value != TokenValue::RightParen && !self.at_the_end() {
+                        arguments.push(self.expression()?);
+                        if self.peek().value == TokenValue::Comma {
+                            self.advance();
+                        }
+                        self.advance();
+                    }
+                    if self.peek().value != TokenValue::RightParen {
+                        return Err(Error::msg(format!(
+                            "[line {}] Error at '{}': Expect ')' after expression.",
+                            self.peek().line,
+                            self.peek().lexeme
+                        )));
+                    }
+                    self.advance();
+                    Ok(Expr::Call(Call { callee, arguments }))
+                } else {
+                    Ok(Expr::Variable(Variable {
+                        name: self.previous().clone(),
+                    }))
+                }
+            }
 
             _ => Err(Error::msg(format!(
                 "[line {}] Error at '{}': Expect expression.",

@@ -1,9 +1,4 @@
-use std::{
-    borrow::BorrowMut,
-    cell::{Ref, RefCell},
-    collections::HashMap,
-    fmt::Display,
-};
+use std::{cell::RefCell, collections::HashMap, fmt::Display};
 
 use anyhow::{Error, Result};
 
@@ -207,7 +202,7 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                 (Value::Boolean(_), v) => Ok(v),
                 (v, Value::Boolean(_)) => Ok(v),
                 _ => Ok(Value::Boolean(true)),
-            }
+            },
             TokenValue::And => match (left, right) {
                 (Value::Boolean(l), Value::Boolean(r)) => Ok(Value::Boolean(l && r)),
                 (Value::Boolean(false), _) => Ok(Value::Boolean(false)),
@@ -248,6 +243,21 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                 "Undefined variable '{}'.\n[line {}]",
                 expr.name.lexeme, expr.name.line
             )))
+    }
+
+    fn visit_call(&self, expr: &crate::expr::Call) -> Result<Value, Error> {
+        if expr.callee.lexeme == "clock" {
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
+            Ok(Value::Number(now as f64))
+        } else {
+            Err(Error::msg(format!(
+                "Undefined function '{}'.\n[line {}]",
+                expr.callee.lexeme, expr.callee.line
+            )))
+        }
     }
 }
 

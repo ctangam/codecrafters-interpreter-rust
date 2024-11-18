@@ -1,4 +1,8 @@
-use crate::{expr::{Assign, Binary, ExprVisitor, Grouping, Literal, Unary, Variable}, stmt::{Print, StmtVisitor}, Walkable};
+use crate::{
+    expr::{Assign, Binary, ExprVisitor, Grouping, Literal, Unary, Variable},
+    stmt::{Print, StmtVisitor},
+    Walkable,
+};
 
 pub struct AstPrinter;
 
@@ -12,7 +16,7 @@ impl ExprVisitor<()> for AstPrinter {
             Literal::Nil => println!("nil"),
         }
     }
-    
+
     fn visit_grouping(&self, expr: &Grouping) -> () {
         todo!()
     }
@@ -32,6 +36,8 @@ impl ExprVisitor<()> for AstPrinter {
     fn visit_variable(&self, expr: &Variable) -> () {
         todo!()
     }
+
+    fn visit_call(&self, expr: &crate::expr::Call) -> () {
+        todo!()
+    }
 }
-
-

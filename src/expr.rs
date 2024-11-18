@@ -1,4 +1,4 @@
-use crate::{token::Token, Walkable};
+use crate::{stmt::Expression, token::Token, Walkable};
 
 #[derive(Debug)]
 pub enum Expr {
@@ -8,6 +8,7 @@ pub enum Expr {
     Binary(Binary),
     Assign(Assign),
     Variable(Variable),
+    Call(Call),
 }
 
 #[derive(Debug)]
@@ -16,7 +17,7 @@ pub enum Literal {
     Number(f64),
     True,
     False,
-    Nil
+    Nil,
 }
 
 #[derive(Debug)]
@@ -48,6 +49,12 @@ pub struct Variable {
     pub name: Token,
 }
 
+#[derive(Debug)]
+pub struct Call {
+    pub callee: Token,
+    pub arguments: Vec<Expr>,
+}
+
 impl<V: ExprVisitor<T>, T> Walkable<V, T> for Expr {
     fn walk(&self, visitor: &V) -> T {
         match self {
@@ -57,6 +64,7 @@ impl<V: ExprVisitor<T>, T> Walkable<V, T> for Expr {
             Expr::Binary(binary) => visitor.visit_binary(binary),
             Expr::Assign(assign) => visitor.visit_assign(assign),
             Expr::Variable(variable) => visitor.visit_variable(variable),
+            Expr::Call(function) => visitor.visit_call(function),
         }
     }
 }
@@ -73,8 +81,9 @@ pub trait ExprVisitor<T> {
     fn visit_assign(&self, expr: &Assign) -> T;
 
     fn visit_variable(&self, expr: &Variable) -> T;
-}
 
+    fn visit_call(&self, expr: &Call) -> T;
+}
 
 impl std::fmt::Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -85,7 +94,7 @@ impl std::fmt::Display for Expr {
                 } else {
                     write!(f, "{}", n)
                 }
-            },
+            }
             Expr::Literal(Literal::String(s)) => s.fmt(f),
             Expr::Literal(Literal::False) => false.fmt(f),
             Expr::Literal(Literal::True) => true.fmt(f),
@@ -98,10 +107,25 @@ impl std::fmt::Display for Expr {
                 operator,
                 right,
             }) => f.write_fmt(format_args!("({} {} {})", operator.lexeme, left, right)),
-            
+
             Expr::Grouping(Grouping { expr }) => f.write_fmt(format_args!("(group {})", expr)),
             Expr::Assign(Assign { name, value }) => write!(f, "(= {} {})", name.lexeme, value),
             Expr::Variable(Variable { name }) => name.lexeme.fmt(f),
+            Expr::Call(Call {
+                callee: name,
+                arguments: params,
+            }) => {
+                write!(
+                    f,
+                    "(fn {} {})",
+                    name.lexeme,
+                    params
+                        .iter()
+                        .map(|a| a.to_string())
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                )
+            }
         }
     }
 }

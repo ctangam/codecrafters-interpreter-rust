@@ -68,7 +68,6 @@ impl<V: StmtVisitor<T>, T> Walkable<V, T> for Stmt {
 }
 
 pub trait StmtVisitor<T> {
-
     fn visit_print(&self, stmt: &Print) -> T;
 
     fn visit_expression(&self, stmt: &Expression) -> T;
@@ -82,5 +81,4 @@ pub trait StmtVisitor<T> {
     fn visit_while(&self, stmt: &While) -> T;
 
     fn visit_for(&self, stmt: &For) -> T;
-    
 }
