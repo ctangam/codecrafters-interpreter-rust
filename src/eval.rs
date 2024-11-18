@@ -32,12 +32,14 @@ impl Display for Value {
 
 pub struct Interpreter {
     env: RefCell<Vec<HashMap<String, Value>>>,
+    rets: RefCell<HashMap<String, Value>>,
 }
 
 impl Interpreter {
     pub fn new() -> Interpreter {
         Interpreter {
             env: RefCell::new(vec![HashMap::new()]),
+            rets: RefCell::new(HashMap::new()),
         }
     }
 
@@ -238,8 +240,7 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
             .borrow()
             .iter()
             .rev()
-            .filter_map(|env| env.get(&expr.name.lexeme))
-            .nth(0)
+            .find_map(|env| env.get(&expr.name.lexeme))
             .cloned()
             .ok_or(Error::msg(format!(
                 "Undefined variable '{}'.\n[line {}]",
@@ -260,10 +261,11 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
             let value = self
                 .env
                 .borrow()
-                .last()
-                .and_then(|env| env.get(&expr.callee.lexeme))
+                .iter()
+                .rev()
+                .find_map(|env| env.get(&expr.callee.lexeme))
                 .cloned();
-            if let Some(Function(Func { name, params, body })) = value {
+            if let Some(Function(Func { params, body, .. })) = value {
                 if params.len() != expr.arguments.len() {
                     return Err(Error::msg(format!(
                         "Expected {} arguments but got {}.\n[line {}]",
@@ -273,16 +275,46 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                     )));
                 }
                 let mut new_env = HashMap::new();
+                let mut args = Vec::new();
                 expr.arguments
                     .iter()
                     .zip(params.iter())
                     .for_each(|(arg, param)| {
-                        new_env.insert(param.lexeme.clone(), arg.walk(self).unwrap());
+                        let arg = arg.walk(self).unwrap();
+                        args.push(arg.clone());
+                        new_env.insert(param.lexeme.clone(), arg);
                     });
+
+                let args = args
+                    .iter()
+                    .map(|v| v.to_string())
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                let func_key = format!("{}({})", &expr.callee.lexeme, args);
+                if let Some(ret) = self
+                    .rets
+                    .borrow()
+                    .get(&func_key)
+                {
+                    println!("cache hit: {} {:?}", func_key, ret);
+                    return Ok(ret.clone());
+                }
 
                 self.env.borrow_mut().push(new_env);
 
-                body.iter().for_each(|stmt| stmt.walk(self).unwrap());
+                for stmt in body {
+                    stmt.walk(self)?;
+                    if self
+                        .env
+                        .borrow_mut()
+                        .last()
+                        .unwrap()
+                        .get("return")
+                        .is_some()
+                    {
+                        break;
+                    }
+                }
 
                 let ret = self
                     .env
@@ -292,6 +324,10 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                     .get("return")
                     .unwrap_or(&Value::Nil)
                     .clone();
+
+                self.rets
+                    .borrow_mut()
+                    .insert(func_key, ret.clone());
                 return Ok(ret);
             }
 
@@ -396,8 +432,14 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
                 .last_mut()
                 .unwrap()
                 .entry("return".to_string())
-                .and_modify(|v| *v = value.clone())
                 .or_insert(value.clone());
+        } else {
+            self.env
+                .borrow_mut()
+                .last_mut()
+                .unwrap()
+                .entry("return".to_string())
+                .or_insert(Value::Nil);
         }
 
         Ok(())
