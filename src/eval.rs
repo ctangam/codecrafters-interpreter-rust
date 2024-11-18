@@ -296,7 +296,6 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                     .borrow()
                     .get(&func_key)
                 {
-                    println!("cache hit: {} {:?}", func_key, ret);
                     return Ok(ret.clone());
                 }
 
