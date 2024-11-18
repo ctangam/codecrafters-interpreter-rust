@@ -43,11 +43,11 @@ impl Parser {
     fn func_stmt(&mut self) -> Result<Stmt, Error> {
         self.advance();
         let name = self.advance().clone();
+        assert_eq!(self.peek().value, TokenValue::LeftParen);
         self.advance();
         let mut params = Vec::new();
-        while self.peek().value != TokenValue::RightParen {
+        while self.peek().value != TokenValue::RightParen && !self.at_the_end() {
             params.push(self.advance().clone());
-            self.advance();
             if self.peek().value == TokenValue::Comma {
                 self.advance();
             }
@@ -362,7 +362,6 @@ impl Parser {
                         if self.peek().value == TokenValue::Comma {
                             self.advance();
                         }
-                        self.advance();
                     }
                     if self.peek().value != TokenValue::RightParen {
                         return Err(Error::msg(format!(
@@ -375,7 +374,7 @@ impl Parser {
                     Ok(Expr::Call(Call { callee, arguments }))
                 } else {
                     Ok(Expr::Variable(Variable {
-                        name: self.previous().clone(),
+                        name: callee,
                     }))
                 }
             }
