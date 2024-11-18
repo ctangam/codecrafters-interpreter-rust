@@ -4,7 +4,7 @@ use anyhow::{Error, Result};
 
 use crate::{
     expr::{Assign, Binary, Expr, ExprVisitor, Grouping, Literal, Unary},
-    stmt::{Block, Expression, For, If, Print, Stmt, StmtVisitor, Var, While},
+    stmt::{Block, Expression, For, Func, If, Print, Stmt, StmtVisitor, Var, While},
     token::{Number, Token, TokenValue},
     Walkable,
 };
@@ -15,7 +15,7 @@ pub enum Value {
     Boolean(bool),
     Number(Number),
     String(String),
-    Function(Vec<Token>, Vec<Stmt>),
+    Function(Func),
 }
 
 impl Display for Value {
@@ -25,7 +25,7 @@ impl Display for Value {
             Value::Boolean(b) => write!(f, "{}", b),
             Value::Number(n) => write!(f, "{}", n),
             Value::String(s) => write!(f, "{}", s),
-            Value::Function(_, _) => write!(f, "function"),
+            Value::Function(func) => write!(f, "<fn {}>", func.name.lexeme),
         }
     }
 }
@@ -263,7 +263,7 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                 .last()
                 .and_then(|env| env.get(&expr.callee.lexeme))
                 .cloned();
-            if let Some(Function(params, stmts)) = value {
+            if let Some(Function(Func { name, params, body })) = value {
                 if params.len() != expr.arguments.len() {
                     return Err(Error::msg(format!(
                         "Expected {} arguments but got {}.\n[line {}]",
@@ -282,7 +282,7 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
 
                 self.env.borrow_mut().push(new_env);
 
-                stmts.iter().for_each(|stmt| stmt.walk(self).unwrap());
+                body.iter().for_each(|stmt| stmt.walk(self).unwrap());
                 return Ok(Value::Nil);
             }
 
@@ -370,7 +370,11 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
             .last_mut()
             .unwrap()
             .entry(stmt.name.lexeme.clone())
-            .or_insert(Value::Function(stmt.params.clone(), stmt.body.clone()));
+            .or_insert(Value::Function(Func {
+                name: stmt.name.clone(),
+                params: stmt.params.clone(),
+                body: stmt.body.clone(),
+            }));
         Ok(())
     }
 }

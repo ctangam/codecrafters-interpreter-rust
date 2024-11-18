@@ -1,4 +1,4 @@
-use crate::{stmt::Expression, token::Token, Walkable};
+use crate::{token::Token, Walkable};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr {

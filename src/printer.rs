@@ -1,8 +1,4 @@
-use crate::{
-    expr::{Assign, Binary, ExprVisitor, Grouping, Literal, Unary, Variable},
-    stmt::{Print, StmtVisitor},
-    Walkable,
-};
+use crate::expr::{Assign, Binary, ExprVisitor, Grouping, Literal, Unary, Variable};
 
 pub struct AstPrinter;
 
