@@ -56,7 +56,7 @@ pub struct Call {
 }
 
 impl<V: ExprVisitor<T>, T> Walkable<V, T> for Expr {
-    fn walk(&self, visitor: &V) -> T {
+    fn walk(&self, visitor: &mut V) -> T {
         match self {
             Expr::Literal(literal) => visitor.visit_literal(literal),
             Expr::Grouping(grouping) => visitor.visit_grouping(grouping),
@@ -70,19 +70,19 @@ impl<V: ExprVisitor<T>, T> Walkable<V, T> for Expr {
 }
 
 pub trait ExprVisitor<T> {
-    fn visit_literal(&self, expr: &Literal) -> T;
+    fn visit_literal(&mut self, expr: &Literal) -> T;
 
-    fn visit_grouping(&self, expr: &Grouping) -> T;
+    fn visit_grouping(&mut self, expr: &Grouping) -> T;
 
-    fn visit_unary(&self, expr: &Unary) -> T;
+    fn visit_unary(&mut self, expr: &Unary) -> T;
 
-    fn visit_binary(&self, expr: &Binary) -> T;
+    fn visit_binary(&mut self, expr: &Binary) -> T;
 
-    fn visit_assign(&self, expr: &Assign) -> T;
+    fn visit_assign(&mut self, expr: &Assign) -> T;
 
-    fn visit_variable(&self, expr: &Variable) -> T;
+    fn visit_variable(&mut self, expr: &Variable) -> T;
 
-    fn visit_call(&self, expr: &Call) -> T;
+    fn visit_call(&mut self, expr: &Call) -> T;
 }
 
 impl std::fmt::Display for Expr {

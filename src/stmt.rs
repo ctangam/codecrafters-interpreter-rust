@@ -70,7 +70,7 @@ pub struct Return {
 }
 
 impl<V: StmtVisitor<T>, T> Walkable<V, T> for Stmt {
-    fn walk(&self, visitor: &V) -> T {
+    fn walk(&self, visitor: &mut V) -> T {
         match self {
             Stmt::Print(print) => visitor.visit_print(print),
             Stmt::Expression(expression) => visitor.visit_expression(expression),
@@ -86,21 +86,21 @@ impl<V: StmtVisitor<T>, T> Walkable<V, T> for Stmt {
 }
 
 pub trait StmtVisitor<T> {
-    fn visit_print(&self, stmt: &Print) -> T;
+    fn visit_print(&mut self, stmt: &Print) -> T;
 
-    fn visit_expression(&self, stmt: &Expression) -> T;
+    fn visit_expression(&mut self, stmt: &Expression) -> T;
 
-    fn visit_var(&self, stmt: &Var) -> T;
+    fn visit_var(&mut self, stmt: &Var) -> T;
 
-    fn visit_block(&self, stmt: &Block) -> T;
+    fn visit_block(&mut self, stmt: &Block) -> T;
 
-    fn visit_if(&self, stmt: &If) -> T;
+    fn visit_if(&mut self, stmt: &If) -> T;
 
-    fn visit_while(&self, stmt: &While) -> T;
+    fn visit_while(&mut self, stmt: &While) -> T;
 
-    fn visit_for(&self, stmt: &For) -> T;
+    fn visit_for(&mut self, stmt: &For) -> T;
 
-    fn visit_func(&self, stmt: &Func) -> T;
+    fn visit_func(&mut self, stmt: &Func) -> T;
 
-    fn visit_return(&self, stmt: &Return) -> T;
+    fn visit_return(&mut self, stmt: &Return) -> T;
 }

@@ -9,7 +9,6 @@ pub mod eval;
 pub mod expr;
 pub mod lexer;
 pub mod parser;
-pub mod printer;
 pub mod stmt;
 pub mod token;
 
@@ -85,7 +84,7 @@ fn main() {
 
                 match exprs {
                     Ok(exprs) => {
-                        let interpreter = Interpreter::new();
+                        let mut interpreter = Interpreter::new();
                         let values = interpreter.interpret(exprs);
                         match values {
                             Ok(values) => {
@@ -125,7 +124,7 @@ fn main() {
 
                 match stmts {
                     Ok(stmts) => {
-                        let interpreter = Interpreter::new();
+                        let mut interpreter = Interpreter::new();
                         let result = interpreter.execute(&stmts);
                         match result {
                             Ok(_) => (),
@@ -152,5 +151,5 @@ fn main() {
 }
 
 pub trait Walkable<V, T> {
-    fn walk(&self, visitor: &V) -> T;
+    fn walk(&self, visitor: &mut V) -> T;
 }

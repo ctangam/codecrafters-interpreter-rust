@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, fmt::Display, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, fmt::Display, hash::Hash, rc::Rc};
 
 use anyhow::{Error, Result};
 
@@ -23,8 +23,9 @@ pub struct LoxFunction {
     pub name: Token,
     pub params: Vec<Token>,
     pub body: Vec<Stmt>,
-    pub closure: RefCell<Vec<HashMap<String, Value>>>,
+    pub closure: Rc<RefCell<Vec<HashMap<String, Value>>>>,
 }
+
 
 impl Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -39,19 +40,19 @@ impl Display for Value {
 }
 
 pub struct Interpreter {
-    env: RefCell<Vec<HashMap<String, Value>>>,
-    rets: RefCell<HashMap<String, Value>>,
+    env: Vec<HashMap<String, Value>>,
+    rets: HashMap<String, Value>,
 }
 
 impl Interpreter {
     pub fn new() -> Interpreter {
         Interpreter {
-            env: RefCell::new(vec![HashMap::new()]),
-            rets: RefCell::new(HashMap::new()),
+            env: vec![HashMap::new()],
+            rets: HashMap::new(),
         }
     }
 
-    pub fn interpret(&self, exprs: Vec<Expr>) -> Result<Vec<Value>, Vec<Error>> {
+    pub fn interpret(&mut self, exprs: Vec<Expr>) -> Result<Vec<Value>, Vec<Error>> {
         let mut values = Vec::new();
         let mut errors = Vec::new();
         for expr in exprs {
@@ -66,7 +67,7 @@ impl Interpreter {
         Ok(values)
     }
 
-    pub fn execute(&self, stmts: &Vec<Stmt>) -> Result<(), Error> {
+    pub fn execute(&mut self, stmts: &Vec<Stmt>) -> Result<(), Error> {
         for stmt in stmts {
             stmt.walk(self)?;
         }
@@ -75,7 +76,7 @@ impl Interpreter {
 }
 
 impl ExprVisitor<Result<Value, Error>> for Interpreter {
-    fn visit_literal(&self, expr: &Literal) -> Result<Value, Error> {
+    fn visit_literal(&mut self, expr: &Literal) -> Result<Value, Error> {
         match expr {
             Literal::String(s) => Ok(Value::String(s.clone())),
             Literal::Number(n) => Ok(Value::Number(n.clone())),
@@ -85,11 +86,11 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
         }
     }
 
-    fn visit_grouping(&self, expr: &Grouping) -> Result<Value, Error> {
+    fn visit_grouping(&mut self, expr: &Grouping) -> Result<Value, Error> {
         expr.expr.walk(self)
     }
 
-    fn visit_unary(&self, expr: &Unary) -> Result<Value, Error> {
+    fn visit_unary(&mut self, expr: &Unary) -> Result<Value, Error> {
         let right = expr.right.walk(self)?;
         match expr.operator.value {
             TokenValue::Minus => {
@@ -111,7 +112,7 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
         }
     }
 
-    fn visit_binary(&self, expr: &Binary) -> Result<Value, Error> {
+    fn visit_binary(&mut self, expr: &Binary) -> Result<Value, Error> {
         let right = expr.right.walk(self)?;
         let left = expr.left.walk(self)?;
         match expr.operator.value {
@@ -228,11 +229,10 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
         }
     }
 
-    fn visit_assign(&self, expr: &Assign) -> Result<Value, Error> {
+    fn visit_assign(&mut self, expr: &Assign) -> Result<Value, Error> {
         let new_value = expr.value.walk(self)?;
         if let Some(v) = self
             .env
-            .borrow_mut()
             .iter_mut()
             .rev()
             .filter_map(|env| env.get_mut(&expr.name.lexeme))
@@ -243,9 +243,8 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
         Ok(new_value)
     }
 
-    fn visit_variable(&self, expr: &crate::expr::Variable) -> Result<Value, Error> {
+    fn visit_variable(&mut self, expr: &crate::expr::Variable) -> Result<Value, Error> {
         self.env
-            .borrow()
             .iter()
             .rev()
             .find_map(|env| env.get(&expr.name.lexeme))
@@ -256,16 +255,15 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
             )))
     }
 
-    fn visit_call(&self, expr: &crate::expr::Call) -> Result<Value, Error> {
-        use crate::eval::Value::Function;
-
-        if let Value::Function(LoxFunction {
-            name,
-            params,
-            body,
-            closure,
-        }) = expr.callee.walk(self)?
+    fn visit_call(&mut self, expr: &crate::expr::Call) -> Result<Value, Error> {
+        if let Value::Function(value) = expr.callee.walk(self)?
         {
+            let LoxFunction {
+                name,
+                params,
+                body,
+                closure,
+            } = value;
             if name.lexeme == "clock" {
                 let now = std::time::SystemTime::now()
                     .duration_since(std::time::SystemTime::UNIX_EPOCH)
@@ -297,19 +295,19 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                     .collect::<Vec<String>>()
                     .join(", ");
                 let func_key = format!("{}({})", &name.lexeme, args);
-                if let Some(ret) = self.rets.borrow().get(&func_key) {
+                if let Some(ret) = self.rets.get(&func_key) {
                     return Ok(ret.clone());
                 }
+            
+                let old_env = self.env.clone();
+                self.env = closure.borrow().clone();
 
-                let old_env = self.env.replace(closure.into_inner());
-
-                self.env.borrow_mut().push(new_env);
+                self.env.push(new_env);
 
                 for stmt in body.iter() {
                     stmt.walk(self)?;
                     if self
                         .env
-                        .borrow_mut()
                         .last()
                         .unwrap()
                         .get("return")
@@ -321,32 +319,19 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
 
                 let ret = self
                     .env
-                    .borrow_mut()
                     .pop()
                     .unwrap()
                     .get("return")
                     .unwrap_or(&Value::Nil)
                     .clone();
 
-                self.rets.borrow_mut().insert(func_key, ret.clone());
+                if let Value::Number(n) = &ret {
+                    self.rets.insert(func_key, ret.clone());
+                }
 
-                let closure = RefCell::new(self.env.replace(old_env));
-                self.env
-                    .borrow_mut()
-                    .iter_mut()
-                    .rev()
-                    .filter(|env| env.contains_key(&name.lexeme))
-                    .next()
-                    .unwrap()
-                    .entry(name.lexeme.clone())
-                    .and_modify(|v| {
-                        *v = Function(LoxFunction {
-                            name,
-                            params,
-                            body,
-                            closure,
-                        })
-                    });
+                closure.replace(self.env.clone());
+                self.env = old_env;
+
                 return Ok(ret);
             }
         } else {
@@ -356,23 +341,22 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
 }
 
 impl StmtVisitor<Result<(), Error>> for Interpreter {
-    fn visit_print(&self, stmt: &Print) -> Result<(), Error> {
+    fn visit_print(&mut self, stmt: &Print) -> Result<(), Error> {
         let value = stmt.expr.walk(self)?;
         println!("{}", value);
         Ok(())
     }
 
-    fn visit_expression(&self, stmt: &Expression) -> Result<(), Error> {
+    fn visit_expression(&mut self, stmt: &Expression) -> Result<(), Error> {
         stmt.expr.walk(self)?;
         Ok(())
     }
 
-    fn visit_var(&self, stmt: &Var) -> Result<(), Error> {
+    fn visit_var(&mut self, stmt: &Var) -> Result<(), Error> {
         let value = stmt.initializer.as_ref();
         if let Some(value) = value {
             let value = value.walk(self)?;
             self.env
-                .borrow_mut()
                 .last_mut()
                 .unwrap()
                 .entry(stmt.name.lexeme.clone())
@@ -380,7 +364,6 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
                 .or_insert(value.clone());
         } else {
             self.env
-                .borrow_mut()
                 .last_mut()
                 .unwrap()
                 .entry(stmt.name.lexeme.clone())
@@ -389,14 +372,17 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
         Ok(())
     }
 
-    fn visit_block(&self, stmt: &Block) -> Result<(), Error> {
-        self.env.borrow_mut().push(HashMap::new());
+    fn visit_block(&mut self, stmt: &Block) -> Result<(), Error> {
+        self.env.push(HashMap::new());
         let _ = self.execute(&stmt.statements);
-        self.env.borrow_mut().pop();
+        let env = self.env.pop().unwrap();
+        if let Some(ret) = env.get("return") {
+            self.env.last_mut().unwrap().insert("return".into(), ret.clone());
+        }
         Ok(())
     }
 
-    fn visit_if(&self, stmt: &If) -> Result<(), Error> {
+    fn visit_if(&mut self, stmt: &If) -> Result<(), Error> {
         if Value::Boolean(false) != stmt.condition.walk(self)? {
             stmt.then_branch.walk(self)?;
         } else if let Some(else_branch) = &stmt.else_branch {
@@ -405,14 +391,14 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
         Ok(())
     }
 
-    fn visit_while(&self, stmt: &While) -> Result<(), Error> {
+    fn visit_while(&mut self, stmt: &While) -> Result<(), Error> {
         while Value::Boolean(false) != stmt.condition.walk(self)? {
             stmt.body.walk(self)?;
         }
         Ok(())
     }
 
-    fn visit_for(&self, stmt: &For) -> Result<(), Error> {
+    fn visit_for(&mut self, stmt: &For) -> Result<(), Error> {
         if let Some(init) = &stmt.init {
             init.walk(self)?;
         }
@@ -425,10 +411,9 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
         Ok(())
     }
 
-    fn visit_func(&self, stmt: &crate::stmt::Func) -> Result<(), Error> {
-        let closure = self.env.clone();
+    fn visit_func(&mut self, stmt: &crate::stmt::Func) -> Result<(), Error> {
+        let closure = Rc::new(RefCell::new(self.env.clone()));
         self.env
-            .borrow_mut()
             .last_mut()
             .unwrap()
             .entry(stmt.name.lexeme.clone())
@@ -442,19 +427,17 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
         Ok(())
     }
 
-    fn visit_return(&self, stmt: &crate::stmt::Return) -> Result<(), Error> {
+    fn visit_return(&mut self, stmt: &crate::stmt::Return) -> Result<(), Error> {
         let value = stmt.value.as_ref();
         if let Some(value) = value {
             let value = value.walk(self)?;
             self.env
-                .borrow_mut()
                 .last_mut()
                 .unwrap()
                 .entry("return".to_string())
                 .or_insert(value.clone());
         } else {
             self.env
-                .borrow_mut()
                 .last_mut()
                 .unwrap()
                 .entry("return".to_string())
