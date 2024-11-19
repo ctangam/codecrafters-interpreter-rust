@@ -16,6 +16,7 @@ pub enum Value {
     Number(Number),
     String(String),
     Function(LoxFunction),
+    RustFunction(String),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -26,7 +27,6 @@ pub struct LoxFunction {
     pub closure: Rc<RefCell<Vec<HashMap<String, Value>>>>,
 }
 
-
 impl Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -35,6 +35,7 @@ impl Display for Value {
             Value::Number(n) => write!(f, "{}", n),
             Value::String(s) => write!(f, "{}", s),
             Value::Function(func) => write!(f, "<fn {}>", func.name.lexeme),
+            Value::RustFunction(s) => write!(f, "fn {}>", s),
         }
     }
 }
@@ -46,8 +47,10 @@ pub struct Interpreter {
 
 impl Interpreter {
     pub fn new() -> Interpreter {
+        let mut env = HashMap::new();
+        env.insert("clock".into(), Value::RustFunction("clock".into()));
         Interpreter {
-            env: vec![HashMap::new()],
+            env: vec![env],
             rets: HashMap::new(),
         }
     }
@@ -244,6 +247,8 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
     }
 
     fn visit_variable(&mut self, expr: &crate::expr::Variable) -> Result<Value, Error> {
+        println!("{expr:?}");
+        println!("{:?}", self.env);
         self.env
             .iter()
             .rev()
@@ -256,21 +261,15 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
     }
 
     fn visit_call(&mut self, expr: &crate::expr::Call) -> Result<Value, Error> {
-        if let Value::Function(value) = expr.callee.walk(self)?
-        {
-            let LoxFunction {
-                name,
-                params,
-                body,
-                closure,
-            } = value;
-            if name.lexeme == "clock" {
-                let now = std::time::SystemTime::now()
-                    .duration_since(std::time::SystemTime::UNIX_EPOCH)
-                    .unwrap()
-                    .as_secs();
-                return Ok(Value::Number(now as f64));
-            } else {
+        match expr.callee.walk(self)? {
+            Value::Function(value) => {
+                let LoxFunction {
+                    name,
+                    params,
+                    body,
+                    closure,
+                } = value;
+
                 if params.len() != expr.args.len() {
                     return Err(Error::msg(format!(
                         "Expected {} arguments but got {}.",
@@ -298,7 +297,7 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                 if let Some(ret) = self.rets.get(&func_key) {
                     return Ok(ret.clone());
                 }
-            
+
                 let old_env = self.env.clone();
                 self.env = closure.borrow().clone();
 
@@ -306,13 +305,7 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
 
                 for stmt in body.iter() {
                     stmt.walk(self)?;
-                    if self
-                        .env
-                        .last()
-                        .unwrap()
-                        .get("return")
-                        .is_some()
-                    {
+                    if self.env.last().unwrap().get("return").is_some() {
                         break;
                     }
                 }
@@ -334,8 +327,14 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
 
                 return Ok(ret);
             }
-        } else {
-            Err(Error::msg(format!("Can't call value '{}'.\n", expr.callee)))
+            Value::RustFunction(s) if &s == "clock" => {
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::SystemTime::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs();
+                return Ok(Value::Number(now as f64));
+            }
+            _ => Err(Error::msg(format!("Can't call value '{}'.\n", expr.callee))),
         }
     }
 }
@@ -377,7 +376,10 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
         let _ = self.execute(&stmt.statements);
         let env = self.env.pop().unwrap();
         if let Some(ret) = env.get("return") {
-            self.env.last_mut().unwrap().insert("return".into(), ret.clone());
+            self.env
+                .last_mut()
+                .unwrap()
+                .insert("return".into(), ret.clone());
         }
         Ok(())
     }
