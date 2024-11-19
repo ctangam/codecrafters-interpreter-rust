@@ -423,7 +423,6 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
                 body: stmt.body.clone(),
                 closure,
             }));
-        println!("{} function defined", stmt.name.lexeme);
         Ok(())
     }
 
