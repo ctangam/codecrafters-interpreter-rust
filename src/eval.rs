@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, fmt::Display};
+use std::{cell::RefCell, collections::HashMap, fmt::Display, rc::Rc};
 
 use anyhow::{Error, Result};
 
@@ -15,7 +15,15 @@ pub enum Value {
     Boolean(bool),
     Number(Number),
     String(String),
-    Function(Func),
+    Function(LoxFunction),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct LoxFunction {
+    pub name: Token,
+    pub params: Vec<Token>,
+    pub body: Vec<Stmt>,
+    pub closure: RefCell<Vec<HashMap<String, Value>>>,
 }
 
 impl Display for Value {
@@ -251,32 +259,30 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
     fn visit_call(&self, expr: &crate::expr::Call) -> Result<Value, Error> {
         use crate::eval::Value::Function;
 
-        if expr.callee.lexeme == "clock" {
-            let now = std::time::SystemTime::now()
-                .duration_since(std::time::SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_secs();
-            Ok(Value::Number(now as f64))
-        } else {
-            let value = self
-                .env
-                .borrow()
-                .iter()
-                .rev()
-                .find_map(|env| env.get(&expr.callee.lexeme))
-                .cloned();
-            if let Some(Function(Func { params, body, .. })) = value {
-                if params.len() != expr.arguments.len() {
+        if let Value::Function(LoxFunction {
+            name,
+            params,
+            body,
+            closure,
+        }) = expr.callee.walk(self)?
+        {
+            if name.lexeme == "clock" {
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::SystemTime::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs();
+                return Ok(Value::Number(now as f64));
+            } else {
+                if params.len() != expr.args.len() {
                     return Err(Error::msg(format!(
-                        "Expected {} arguments but got {}.\n[line {}]",
+                        "Expected {} arguments but got {}.",
                         params.len(),
-                        expr.arguments.len(),
-                        expr.callee.line
+                        expr.args.len(),
                     )));
                 }
                 let mut new_env = HashMap::new();
                 let mut args = Vec::new();
-                expr.arguments
+                expr.args
                     .iter()
                     .zip(params.iter())
                     .for_each(|(arg, param)| {
@@ -290,18 +296,16 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                     .map(|v| v.to_string())
                     .collect::<Vec<String>>()
                     .join(", ");
-                let func_key = format!("{}({})", &expr.callee.lexeme, args);
-                if let Some(ret) = self
-                    .rets
-                    .borrow()
-                    .get(&func_key)
-                {
+                let func_key = format!("{}({})", &name.lexeme, args);
+                if let Some(ret) = self.rets.borrow().get(&func_key) {
                     return Ok(ret.clone());
                 }
 
+                let old_env = self.env.replace(closure.into_inner());
+
                 self.env.borrow_mut().push(new_env);
 
-                for stmt in body {
+                for stmt in body.iter() {
                     stmt.walk(self)?;
                     if self
                         .env
@@ -324,16 +328,29 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                     .unwrap_or(&Value::Nil)
                     .clone();
 
-                self.rets
+                self.rets.borrow_mut().insert(func_key, ret.clone());
+
+                let closure = RefCell::new(self.env.replace(old_env));
+                self.env
                     .borrow_mut()
-                    .insert(func_key, ret.clone());
+                    .iter_mut()
+                    .rev()
+                    .filter(|env| env.contains_key(&name.lexeme))
+                    .next()
+                    .unwrap()
+                    .entry(name.lexeme.clone())
+                    .and_modify(|v| {
+                        *v = Function(LoxFunction {
+                            name,
+                            params,
+                            body,
+                            closure,
+                        })
+                    });
                 return Ok(ret);
             }
-
-            Err(Error::msg(format!(
-                "Undefined function '{}'.\n[line {}]",
-                expr.callee.lexeme, expr.callee.line
-            )))
+        } else {
+            Err(Error::msg(format!("Can't call value '{}'.\n", expr.callee)))
         }
     }
 }
@@ -409,16 +426,19 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
     }
 
     fn visit_func(&self, stmt: &crate::stmt::Func) -> Result<(), Error> {
+        let closure = self.env.clone();
         self.env
             .borrow_mut()
             .last_mut()
             .unwrap()
             .entry(stmt.name.lexeme.clone())
-            .or_insert(Value::Function(Func {
+            .or_insert(Value::Function(LoxFunction {
                 name: stmt.name.clone(),
                 params: stmt.params.clone(),
                 body: stmt.body.clone(),
+                closure,
             }));
+        println!("{} function defined", stmt.name.lexeme);
         Ok(())
     }
 

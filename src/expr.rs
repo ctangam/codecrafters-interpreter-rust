@@ -51,8 +51,8 @@ pub struct Variable {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Call {
-    pub callee: Token,
-    pub arguments: Vec<Expr>,
+    pub callee: Box<Expr>,
+    pub args: Vec<Expr>,
 }
 
 impl<V: ExprVisitor<T>, T> Walkable<V, T> for Expr {
@@ -111,16 +111,12 @@ impl std::fmt::Display for Expr {
             Expr::Grouping(Grouping { expr }) => f.write_fmt(format_args!("(group {})", expr)),
             Expr::Assign(Assign { name, value }) => write!(f, "(= {} {})", name.lexeme, value),
             Expr::Variable(Variable { name }) => name.lexeme.fmt(f),
-            Expr::Call(Call {
-                callee: name,
-                arguments: params,
-            }) => {
+            Expr::Call(Call { callee, args }) => {
                 write!(
                     f,
                     "(fn {} {})",
-                    name.lexeme,
-                    params
-                        .iter()
+                    callee.to_string(),
+                    args.iter()
                         .map(|a| a.to_string())
                         .collect::<Vec<_>>()
                         .join(" ")

@@ -363,8 +363,50 @@ impl Parser {
                 right: Box::new(right),
             }))
         } else {
-            self.primary()
+            self.call()
         }
+    }
+
+    fn call(&mut self) -> Result<Expr, Error> {
+        let mut expr = self.primary()?;
+
+        while self.matches(&[TokenValue::LeftParen]) {
+            expr = self.finish_call(expr)?
+        }
+
+        Ok(expr)
+    }
+
+    fn finish_call(&mut self, callee: Expr) -> Result<Expr, Error> {
+        let mut args = vec![];
+        if !self.matches(&[TokenValue::RightParen]) {
+            args.push(self.expression()?);
+            while self.matches(&[TokenValue::Comma]) {
+                if args.len() >= 255 {
+                    return Err(Error::msg(format!(
+                        "[line {}] Error: Can't have more than 255 arguments.",
+                        self.peek().line
+                    )));
+                }
+                args.push(self.expression()?);
+            }
+        } else {
+            return Ok(Expr::Call(Call {
+                callee: Box::new(callee),
+                args,
+            }));
+        }
+        if !self.matches(&[TokenValue::RightParen]) {
+            return Err(Error::msg(format!(
+                "[line {}] Error: Expect ')' after arguments.",
+                self.peek().line
+            )));
+        }
+
+        Ok(Expr::Call(Call {
+            callee: Box::new(callee),
+            args,
+        }))
     }
 
     fn primary(&mut self) -> Result<Expr, Error> {
@@ -391,31 +433,9 @@ impl Parser {
             }
 
             TokenValue::Identifier => {
-                let callee = self.previous().clone();
-                if self.peek().value == TokenValue::LeftParen {
-                    self.advance();
-                    let mut arguments = Vec::new();
-                    while self.peek().value != TokenValue::RightParen && !self.at_the_end() {
-                        arguments.push(self.expression()?);
-                        match self.peek().value {
-                            TokenValue::Comma => {
-                                self.advance();
-                            }
-                            TokenValue::RightParen => break,
-                            _ => {
-                                return Err(Error::msg(format!(
-                                    "[line {}] Error at '{}': Expect ')' after parameters.",
-                                    self.peek().line,
-                                    self.peek().lexeme
-                                )));
-                            }
-                        }
-                    }
-                    self.advance();
-                    Ok(Expr::Call(Call { callee, arguments }))
-                } else {
-                    Ok(Expr::Variable(Variable { name: callee }))
-                }
+                let name = self.previous().clone();
+
+                Ok(Expr::Variable(Variable { name }))
             }
 
             _ => Err(Error::msg(format!(
