@@ -270,9 +270,10 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
 
                 if params.len() != expr.args.len() {
                     return Err(Error::msg(format!(
-                        "Expected {} arguments but got {}.",
+                        "Expected {} arguments but got {}.\n[line {}]",
                         params.len(),
                         expr.args.len(),
+                        expr.paren.line
                     )));
                 }
                 let mut new_env = HashMap::new();
@@ -332,7 +333,7 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                     .as_secs();
                 return Ok(Value::Number(now as f64));
             }
-            _ => Err(Error::msg(format!("Can't call value '{}'.\n", expr.callee))),
+            _ => Err(Error::msg(format!("Can only call functions and classes.\n[line {}]", expr.paren.line))),
         }
     }
 }

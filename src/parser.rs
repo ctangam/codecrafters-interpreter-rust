@@ -394,6 +394,7 @@ impl Parser {
             return Ok(Expr::Call(Call {
                 callee: Box::new(callee),
                 args,
+                paren: self.previous().clone(),
             }));
         }
         if !self.matches(&[TokenValue::RightParen]) {
@@ -406,6 +407,7 @@ impl Parser {
         Ok(Expr::Call(Call {
             callee: Box::new(callee),
             args,
+            paren: self.previous().clone(),
         }))
     }
 
