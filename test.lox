@@ -1,5 +1,6 @@
 fun f() {
-    while (!false) return "ok";
+  return;
+  print "bad";
 }
 
 print f();

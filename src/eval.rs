@@ -313,7 +313,7 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                 for stmt in body.iter() {
                     match stmt.walk(self) {
                         Ok(_) => {}
-                        Err(e) => ret = e.to_string(),
+                        Err(e) => {ret = e.to_string(); break;}
                     }
                 }
 
