@@ -306,6 +306,7 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
 
                 let old_env = self.env.clone();
                 self.env = closure.borrow().clone();
+                let len = self.env.len();
 
                 self.env.push(new_env);
 
@@ -319,7 +320,7 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
 
                 let ret = self
                     .env
-                    .pop()
+                    .last()
                     .unwrap()
                     .get(&ret)
                     .unwrap_or(&Value::Nil)
@@ -329,6 +330,7 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                     self.rets.insert(func_key, ret.clone());
                 }
 
+                self.env.drain(len..);
                 closure.replace(self.env.clone());
                 self.env = old_env;
 
@@ -383,14 +385,8 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
 
     fn visit_block(&mut self, stmt: &Block) -> Result<(), Error> {
         self.env.push(HashMap::new());
-        let _ = self.execute(&stmt.statements);
-        let env = self.env.pop().unwrap();
-        if let Some(ret) = env.get("return") {
-            self.env
-                .last_mut()
-                .unwrap()
-                .insert("return".into(), ret.clone());
-        }
+        self.execute(&stmt.statements)?;
+        self.env.pop().unwrap();
         Ok(())
     }
 
@@ -450,7 +446,7 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
     }
 
     fn visit_return(&mut self, stmt: &crate::stmt::Return) -> Result<(), Error> {
-        let value = stmt.value.as_ref();
+        let value = &stmt.value;
         if let Some(value) = value {
             let value = value.walk(self)?;
             self.env
