@@ -247,8 +247,6 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
     }
 
     fn visit_variable(&mut self, expr: &crate::expr::Variable) -> Result<Value, Error> {
-        println!("{expr:?}");
-        println!("{:?}", self.env);
         self.env
             .iter()
             .rev()
@@ -415,6 +413,17 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
 
     fn visit_func(&mut self, stmt: &crate::stmt::Func) -> Result<(), Error> {
         let closure = Rc::new(RefCell::new(self.env.clone()));
+        closure
+            .borrow_mut()
+            .last_mut()
+            .unwrap()
+            .entry(stmt.name.lexeme.clone())
+            .or_insert(Value::Function(LoxFunction {
+                name: stmt.name.clone(),
+                params: stmt.params.clone(),
+                body: stmt.body.clone(),
+                closure: closure.clone(),
+            }));
         self.env
             .last_mut()
             .unwrap()
@@ -423,7 +432,7 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
                 name: stmt.name.clone(),
                 params: stmt.params.clone(),
                 body: stmt.body.clone(),
-                closure,
+                closure: closure.clone(),
             }));
         Ok(())
     }
