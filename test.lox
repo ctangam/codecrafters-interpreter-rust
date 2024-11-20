@@ -1,13 +1,10 @@
-var count = 3;
-
-fun tick() {
-  if (count > 0) {
-    print count;
-    count = count - 1;
-    return false;
-  }
-  print "Blast off!";
-  return true;
+var a = 96;
+fun printAndModify() {
+  print a;
+  var a = 89;
+  print a;
 }
 
-while (!tick()) {print tick();}
+print a;
+var a = 72;
+printAndModify();
