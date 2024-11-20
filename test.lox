@@ -1,1 +1,5 @@
-false();
+fun f() {
+    while (!false) return "ok";
+}
+
+print f();

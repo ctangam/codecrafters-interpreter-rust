@@ -1,13 +1,20 @@
 use std::{cell::RefCell, collections::HashMap, fmt::Display, hash::Hash, rc::Rc};
 
 use anyhow::{Error, Result};
+use thiserror::Error;
 
 use crate::{
     expr::{Assign, Binary, Expr, ExprVisitor, Grouping, Literal, Unary},
-    stmt::{Block, Expression, For, Func, If, Print, Stmt, StmtVisitor, Var, While},
+    stmt::{Block, Expression, For, If, Print, Stmt, StmtVisitor, Var, While},
     token::{Number, Token, TokenValue},
     Walkable,
 };
+
+#[derive(Error, Debug)]
+pub enum EvalError {
+    #[error("{0}")]
+    Return(String),
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Value {
@@ -302,10 +309,11 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
 
                 self.env.push(new_env);
 
+                let mut ret = "return".to_string();
                 for stmt in body.iter() {
-                    stmt.walk(self)?;
-                    if self.env.last().unwrap().get("return").is_some() {
-                        break;
+                    match stmt.walk(self) {
+                        Ok(_) => {}
+                        Err(e) => ret = e.to_string(),
                     }
                 }
 
@@ -313,11 +321,11 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                     .env
                     .pop()
                     .unwrap()
-                    .get("return")
+                    .get(&ret)
                     .unwrap_or(&Value::Nil)
                     .clone();
 
-                if let Value::Number(n) = &ret {
+                if let Value::Number(_) = &ret {
                     self.rets.insert(func_key, ret.clone());
                 }
 
@@ -333,7 +341,10 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                     .as_secs();
                 return Ok(Value::Number(now as f64));
             }
-            _ => Err(Error::msg(format!("Can only call functions and classes.\n[line {}]", expr.paren.line))),
+            _ => Err(Error::msg(format!(
+                "Can only call functions and classes.\n[line {}]",
+                expr.paren.line
+            ))),
         }
     }
 }
@@ -455,6 +466,6 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
                 .or_insert(Value::Nil);
         }
 
-        Ok(())
+        return Err(EvalError::Return("return".into()).into());
     }
 }

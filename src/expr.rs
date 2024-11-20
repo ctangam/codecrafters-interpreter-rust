@@ -112,7 +112,7 @@ impl std::fmt::Display for Expr {
             Expr::Grouping(Grouping { expr }) => f.write_fmt(format_args!("(group {})", expr)),
             Expr::Assign(Assign { name, value }) => write!(f, "(= {} {})", name.lexeme, value),
             Expr::Variable(Variable { name }) => name.lexeme.fmt(f),
-            Expr::Call(Call { callee, args , ..}) => {
+            Expr::Call(Call { callee, args, .. }) => {
                 write!(
                     f,
                     "(fn {} {})",
