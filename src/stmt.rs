@@ -1,6 +1,5 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use crate::{eval::Value, expr::Expr, token::Token, Walkable};
+use crate::{expr::Expr, token::Token, Walkable};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Stmt {
