@@ -48,7 +48,6 @@ impl Display for Value {
 }
 
 pub struct Interpreter {
-    global: HashMap<String, Value>,
     env: Vec<HashMap<String, Value>>,
     rets: HashMap<String, Value>,
 }
@@ -58,7 +57,6 @@ impl Interpreter {
         let mut env = HashMap::new();
         env.insert("clock".into(), Value::RustFunction("clock".into()));
         Interpreter {
-            global: HashMap::new(),
             env: vec![env],
             rets: HashMap::new(),
         }
@@ -260,7 +258,6 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
             .iter()
             .rev()
             .find_map(|env| env.get(&expr.name.lexeme))
-            .or_else(|| self.global.get(&expr.name.lexeme))
             .cloned()
             .ok_or(Error::msg(format!(
                 "Undefined variable '{}'.\n[line {}]",
@@ -308,7 +305,9 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                 }
 
                 let old_env = self.env.clone();
-                self.env = closure.borrow().clone();
+
+                self.env = vec![old_env.first().unwrap().clone()];
+                self.env.extend_from_slice(&closure.borrow()[1..]);
                 let len = self.env.len();
 
                 self.env.push(new_env);
@@ -370,32 +369,24 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
         let value = stmt.initializer.as_ref();
         if let Some(value) = value {
             let value = value.walk(self)?;
-            if self.env.len() == 1 {
-                self.global.entry(stmt.name.lexeme.clone())
-                .and_modify(|v| *v = value.clone())
-                .or_insert(value.clone());
-            } else {
+            
                 self.env
                 .last_mut()
                 .unwrap()
                 .entry(stmt.name.lexeme.clone())
                 .and_modify(|v| *v = value.clone())
                 .or_insert(value.clone());
-            }
+            
             
         } else {
-            if self.env.len() == 1 {
-                self.global.entry(stmt.name.lexeme.clone())
-                .and_modify(|v| *v = Value::Nil)
-                .or_insert(Value::Nil);
-            } else {
+            
                 self.env
                 .last_mut()
                 .unwrap()
                 .entry(stmt.name.lexeme.clone())
                 .and_modify(|v| *v = Value::Nil)
                 .or_insert(Value::Nil);
-            }
+            
         }
         Ok(())
     }
