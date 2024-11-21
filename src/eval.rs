@@ -53,6 +53,17 @@ pub struct Interpreter {
 }
 
 impl Interpreter {
+
+   pub fn define(&mut self, name: String, value: Option<Value>) { self.env.last_mut().unwrap().insert(name, value.unwrap_or(Value::Nil)); }
+
+   pub fn assign(&mut self, name: String, value: Value) -> Result<(), Error> {
+       self.env.iter_mut().rev().filter(|env| env.contains_key(&name)).next().and_then(|env| env.insert(name.clone(), value)).ok_or(Error::msg(format!("Undefined variable '{}'.", name)))?;
+       Ok(())
+   }
+
+   pub fn get(&self, name: String) -> Option<Value> { self.env.iter().rev().filter(|env| env.contains_key(&name)).next().and_then(|env| env.get(&name).cloned()) }
+
+
     pub fn new() -> Interpreter {
         let mut env = HashMap::new();
         env.insert("clock".into(), Value::RustFunction("clock".into()));
