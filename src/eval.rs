@@ -328,7 +328,7 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
 
                 let ret = self.retrieve_return();
 
-                if let Value::Number(_) = &ret {
+                if name.lexeme == "fib" {
                     self.rets.insert(func_key, ret.clone());
                 }
 
