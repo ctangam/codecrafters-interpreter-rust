@@ -12,8 +12,8 @@ use crate::{
 
 #[derive(Error, Debug)]
 pub enum EvalError {
-    #[error("{0}")]
-    Return(String),
+    #[error("return")]
+    Return,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -31,7 +31,7 @@ pub struct LoxFunction {
     pub name: Token,
     pub params: Vec<Token>,
     pub body: Vec<Stmt>,
-    pub closure: Rc<RefCell<Vec<HashMap<String, Value>>>>,
+    pub closure: Vec<Rc<RefCell<HashMap<String, Value>>>>,
 }
 
 impl Display for Value {
@@ -48,25 +48,34 @@ impl Display for Value {
 }
 
 pub struct Interpreter {
-    env: Vec<HashMap<String, Value>>,
+    env: Vec<Rc<RefCell<HashMap<String, Value>>>>,
     rets: HashMap<String, Value>,
 }
 
 impl Interpreter {
 
-   pub fn define(&mut self, name: String, value: Option<Value>) { self.env.last_mut().unwrap().insert(name, value.unwrap_or(Value::Nil)); }
+   pub fn define(&self, name: String, value: Value) { self.env.last().unwrap().borrow_mut().insert(name, value); }
 
-   pub fn assign(&mut self, name: String, value: Value) -> Result<(), Error> {
-       self.env.iter_mut().rev().filter(|env| env.contains_key(&name)).next().and_then(|env| env.insert(name.clone(), value)).ok_or(Error::msg(format!("Undefined variable '{}'.", name)))?;
+   pub fn assign(&self, name: String, value: Value) -> Result<(), Error> {
+       self.env.iter().rev().filter(|env| env.borrow().contains_key(&name)).next().and_then(|env| env.borrow_mut().insert(name.clone(), value)).ok_or(Error::msg(format!("Undefined variable '{}'.", name)))?;
        Ok(())
    }
 
-   pub fn get(&self, name: String) -> Option<Value> { self.env.iter().rev().filter(|env| env.contains_key(&name)).next().and_then(|env| env.get(&name).cloned()) }
+   pub fn get(&self, name: &str) -> Option<Value> { self.env.iter().rev().filter(|env| env.borrow().contains_key(name)).next().and_then(|env| env.borrow().get(name).cloned()) }
 
+   pub fn return_value(&mut self, value: Value) { self.define("return".into(), value); }
+
+   pub fn retrieve_return(&self) -> Value { self.get("return").unwrap_or(Value::Nil) }
+
+   pub fn enter(&mut self) {
+       self.env.push(Rc::new(RefCell::new(HashMap::new())));
+   }
+
+   pub fn exit(&mut self) { self.env.pop(); }
 
     pub fn new() -> Interpreter {
-        let mut env = HashMap::new();
-        env.insert("clock".into(), Value::RustFunction("clock".into()));
+        let env = Rc::new(RefCell::new(HashMap::new()));
+        env.borrow_mut().insert("clock".into(), Value::RustFunction("clock".into()));
         Interpreter {
             env: vec![env],
             rets: HashMap::new(),
@@ -252,24 +261,13 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
 
     fn visit_assign(&mut self, expr: &Assign) -> Result<Value, Error> {
         let new_value = expr.value.walk(self)?;
-        if let Some(v) = self
-            .env
-            .iter_mut()
-            .rev()
-            .filter_map(|env| env.get_mut(&expr.name.lexeme))
-            .nth(0)
-        {
-            *v = new_value.clone();
-        }
+        self.assign(expr.name.lexeme.clone(), new_value.clone())?;
         Ok(new_value)
     }
 
     fn visit_variable(&mut self, expr: &crate::expr::Variable) -> Result<Value, Error> {
-        self.env
-            .iter()
-            .rev()
-            .find_map(|env| env.get(&expr.name.lexeme))
-            .cloned()
+        self
+            .get(&expr.name.lexeme)
             .ok_or(Error::msg(format!(
                 "Undefined variable '{}'.\n[line {}]",
                 expr.name.lexeme, expr.name.line
@@ -316,35 +314,24 @@ impl ExprVisitor<Result<Value, Error>> for Interpreter {
                 }
 
                 let old_env = self.env.clone();
+                self.env = closure.clone();
 
-                self.env = vec![old_env.first().unwrap().clone()];
-                self.env.extend_from_slice(&closure.borrow()[1..]);
-                let len = self.env.len();
+                self.env.push(Rc::new(RefCell::new(new_env)));
 
-                self.env.push(new_env);
-
-                let mut ret = "return".to_string();
                 for stmt in body.iter() {
                     match stmt.walk(self) {
                         Ok(_) => {}
-                        Err(e) => {ret = e.to_string(); break;}
+                        Err(e) if e.is::<EvalError>() => {break;}
+                        Err(e) => return Err(e),
                     }
                 }
 
-                let ret = self
-                    .env
-                    .last()
-                    .unwrap()
-                    .get(&ret)
-                    .unwrap_or(&Value::Nil)
-                    .clone();
+                let ret = self.retrieve_return();
 
                 if let Value::Number(_) = &ret {
                     self.rets.insert(func_key, ret.clone());
                 }
 
-                self.env.drain(len..);
-                closure.replace(self.env.clone());
                 self.env = old_env;
 
                 return Ok(ret);
@@ -379,33 +366,19 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
     fn visit_var(&mut self, stmt: &Var) -> Result<(), Error> {
         let value = stmt.initializer.as_ref();
         if let Some(value) = value {
-            let value = value.walk(self)?;
-            
-                self.env
-                .last_mut()
-                .unwrap()
-                .entry(stmt.name.lexeme.clone())
-                .and_modify(|v| *v = value.clone())
-                .or_insert(value.clone());
-            
-            
+            let value = value.walk(self)?; 
+            self.define(stmt.name.lexeme.clone(), value);
+
         } else {
-            
-                self.env
-                .last_mut()
-                .unwrap()
-                .entry(stmt.name.lexeme.clone())
-                .and_modify(|v| *v = Value::Nil)
-                .or_insert(Value::Nil);
-            
+            self.define(stmt.name.lexeme.clone(), Value::Nil);
         }
         Ok(())
     }
 
     fn visit_block(&mut self, stmt: &Block) -> Result<(), Error> {
-        self.env.push(HashMap::new());
+        self.enter();
         self.execute(&stmt.statements)?;
-        self.env.pop().unwrap();
+        self.exit();
         Ok(())
     }
 
@@ -439,27 +412,12 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
     }
 
     fn visit_func(&mut self, stmt: &crate::stmt::Func) -> Result<(), Error> {
-        let closure = Rc::new(RefCell::new(self.env.clone()));
-        closure
-            .borrow_mut()
-            .last_mut()
-            .unwrap()
-            .entry(stmt.name.lexeme.clone())
-            .or_insert(Value::Function(LoxFunction {
+        let closure = self.env.clone();
+        self.define(stmt.name.lexeme.clone(), Value::Function(LoxFunction {
                 name: stmt.name.clone(),
                 params: stmt.params.clone(),
                 body: stmt.body.clone(),
-                closure: closure.clone(),
-            }));
-        self.env
-            .last_mut()
-            .unwrap()
-            .entry(stmt.name.lexeme.clone())
-            .or_insert(Value::Function(LoxFunction {
-                name: stmt.name.clone(),
-                params: stmt.params.clone(),
-                body: stmt.body.clone(),
-                closure: closure.clone(),
+                closure,
             }));
         Ok(())
     }
@@ -468,19 +426,11 @@ impl StmtVisitor<Result<(), Error>> for Interpreter {
         let value = &stmt.value;
         if let Some(value) = value {
             let value = value.walk(self)?;
-            self.env
-                .last_mut()
-                .unwrap()
-                .entry("return".to_string())
-                .or_insert(value.clone());
+            self.return_value(value);
         } else {
-            self.env
-                .last_mut()
-                .unwrap()
-                .entry("return".to_string())
-                .or_insert(Value::Nil);
+            self.return_value(Value::Nil);
         }
 
-        return Err(EvalError::Return("return".into()).into());
+        return Err(EvalError::Return.into());
     }
 }

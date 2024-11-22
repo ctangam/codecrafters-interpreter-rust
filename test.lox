@@ -1,0 +1,11 @@
+var count = 22;
+fun test() {
+    print count;
+    count = 23;
+    print count;
+    var count = 24;
+    print count;
+}
+
+var count = 25;
+test();
